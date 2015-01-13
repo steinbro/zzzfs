@@ -1,0 +1,42 @@
+ZzzFS: dataset management à la ZFS
+
+ZzzFS ("snooze FS") brings a set of ZFS management commands to non-ZFS volumes,
+turning any directory on a traditional filesystem into a zpool-like object.
+Using only the Python standard library, ZzzFS can be useful to, for example,
+test tools that use ZFS functionality on a system lacking real ZFS. Of course,
+ZzzFS misses all of the low-level features underpinning true ZFS volumes:
+checksumming, copy-on-write, etc.
+
+
+This is a functional work in progress; don't trust any important data to it
+just yet. The test suite covers the following features:
+
+ - create/destroy "filesystems"
+ - create/destroy, clone/promote, send/receive, diff snapshots
+ - get/set/inherit attributes
+
+
+Example usage:
+
+  $ zzzpool create pool /tmp/pool
+  $ zzzpool list
+  NAME    SIZE    ALLOC   FREE    CAP     HEALTH  ALTROOT
+  pool       -        -      -      -     ONLINE  -
+  $ zzzfs create pool/work
+  $ zzzfs create pool/play
+  $ zzzfs snapshot pool/work@yesterday
+  $ zzzfs list -t all
+  NAME                    USED    AVAIL   REFER   MOUNTPOINT
+  pool                       -        -       -   /private/tmp/pool/pool
+  pool/play                  -        -       -   /private/tmp/pool/pool/play
+  pool/work                  -        -       -   /private/tmp/pool/pool/work
+  pool/work@yesterday        -        -       -   -
+  $ zzzfs send pool/work@yesterday | zzzfs receive pool/more_work
+
+
+For more details on real ZFS command usage, see the Oracle Solaris ZFS
+Administration Guide (https://docs.oracle.com/cd/E26505_01/pdf/E37384.pdf).
+
+
+Released under the CDDL v1.1 license. There's no original ZFS code present, but
+it's only appropriate to pair "snooze" with "cuddle."

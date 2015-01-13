@@ -1,0 +1,111 @@
+#!/usr/bin/env python2.7
+#
+# CDDL HEADER START
+#
+# The contents of this file are subject to the terms of the
+# Common Development and Distribution License, version 1.1 (the "License").
+# You may not use this file except in compliance with the License.
+#
+# You can obtain a copy of the license at ./LICENSE.
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+# When distributing Covered Code, include this CDDL HEADER in each
+# file and include the License file at ./LICENSE.
+# If applicable, add the following below this CDDL HEADER, with the
+# fields enclosed by brackets "[]" replaced with your own identifying
+# information: Portions Copyright [yyyy] [name of copyright owner]
+#
+# CDDL HEADER END
+#
+
+# Copyright (c) 2015 Daniel W. Steinbrook. All rights reserved.
+
+import sys
+import argparse
+from libzzzfs import zfs
+from libzzzfs.util import PropertyList, ZzzFSException
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers(dest='command', title='subcommands')
+
+    # per-command arguments
+    clone = subparsers.add_parser('clone')
+    clone.add_argument('snapshot')
+    clone.add_argument('filesystem')
+
+    create = subparsers.add_parser('create')
+    create.add_argument('filesystem')
+
+    destroy = subparsers.add_parser('destroy')
+    destroy.add_argument('filesystem')
+
+    diff = subparsers.add_parser('diff')
+    diff.add_argument('identifier', metavar='snapshot')
+    diff.add_argument('other_identifier', metavar='snapshot|filesystem')
+
+    get = subparsers.add_parser('get')
+    get.add_argument(
+        'properties', metavar='all | property[,property...]', type=PropertyList,
+        default=PropertyList(''))
+    get.add_argument(
+        'identifiers', metavar='filesystem|snapshot', nargs='+', default=[])
+    get.add_argument('-H', action='store_true', dest='scriptable_mode')
+    get.add_argument(
+        '-o', metavar='all | field[,field...]', type=PropertyList,
+        default=PropertyList('all'), dest='headers')
+
+    inherit = subparsers.add_parser('inherit')
+    inherit.add_argument('property')
+    inherit.add_argument(
+        'identifiers', metavar='filesystem|snapshot', nargs='+', default=[])
+
+    list = subparsers.add_parser('list')
+    list.add_argument(
+        '-t', metavar='type[,type...]', dest='types', type=PropertyList,
+        default=PropertyList('filesystems'))
+    list.add_argument('-H', action='store_true', dest='scriptable_mode')
+    list.add_argument(
+        '-o', metavar='property[,property...]', dest='headers',
+        type=PropertyList,
+        default=PropertyList('name,used,available,refer,mountpoint'))
+
+    promote = subparsers.add_parser('promote')
+    promote.add_argument('clone_filesystem')
+
+    receive = subparsers.add_parser('receive')
+    receive.add_argument('filesystem')
+
+    rename = subparsers.add_parser('rename')
+    rename.add_argument('identifier', metavar='filesystem|snapshot')
+    rename.add_argument('other_identifier', metavar='filesystem|snapshot')
+
+    rollback = subparsers.add_parser('rollback')
+    rollback.add_argument('snapshot')
+
+    send = subparsers.add_parser('send')
+    send.add_argument('snapshot')
+
+    set = subparsers.add_parser('set')
+    set.add_argument('keyval', metavar='property=value')
+    set.add_argument(
+        'identifiers', metavar='filesystem|snapshot', nargs='+', default=[])
+
+    snap = subparsers.add_parser('snapshot')
+    snap.add_argument(
+        'snapshots', metavar='filesystem@snapname', nargs='+', default=[])
+
+    # generate dict of argument keys/values
+    args = parser.parse_args()
+    params = dict(args._get_kwargs())
+    del params['command']
+
+    try:
+        output = getattr(zfs, args.command)(**params)
+    except ZzzFSException, e:
+        sys.exit('%s: %s' % (sys.argv[0], e))
+
+    if output:
+        print output
