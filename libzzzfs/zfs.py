@@ -43,11 +43,11 @@ def clone(snapshot, filesystem):
     return [dataset1, dataset2]
 
 
-def create(filesystem):
+def create(filesystem, create_parents):
     '''Create a filesystem.'''
     dataset = get_dataset_by(
         filesystem, should_be=Filesystem, should_exist=False)
-    dataset.create()
+    dataset.create(create_parents)
     return dataset
 
 

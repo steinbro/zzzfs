@@ -155,6 +155,18 @@ class ZFSTest(ZzzFSTestBase):
         with self.assertRaises(ZzzFSException):
             get_dataset_by('foo@bar!', should_exist=False)
 
+    def test_zfs_create(self):
+        # missing intermediate filesystems
+        with self.assertRaises(ZzzFSException):
+            self.zzzcmd('zzzfs create foo/missing/subfoo')
+
+        # -p should create missing filesystems
+        self.zzzcmd('zzzfs create -p foo/missing/subfoo')
+        self.assertTrue(
+            get_dataset_by('foo/missing', should_exist=None).exists())
+        self.assertTrue(
+            get_dataset_by('foo/missing/subfoo', should_exist=None).exists())
+
     def test_zfs_get_set(self):
         # local vs.inherited properties
         self.zzzcmd('zzzfs create foo/subfoo')

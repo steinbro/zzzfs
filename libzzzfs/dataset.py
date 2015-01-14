@@ -300,7 +300,15 @@ class Filesystem(Dataset):
     def exists(self):
         return os.path.exists(self.root)
 
-    def create(self, from_stream=None):
+    def create(self, create_parents=False, from_stream=None):
+        if not self.get_parent().exists():
+            if create_parents:
+                #logger.debug('%s: need to create %s', self, self.get_parent())
+                self.get_parent().create(create_parents=True)
+            else:
+                raise ZzzFSException, (
+                    '%s: parent filesystem missing' % self.name)
+
         # create relative symlink into pool data
         target = os.path.join('..', '..', 'data', self.poolless_name)
         try:

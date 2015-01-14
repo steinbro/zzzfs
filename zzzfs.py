@@ -40,6 +40,9 @@ def zzzfs_main(argv):
 
     create = subparsers.add_parser('create', help='create a filesystem')
     create.add_argument('filesystem')
+    create.add_argument(
+        '-p', action='store_true', dest='create_parents',
+        help='create missing parent filesystems')
 
     destroy = subparsers.add_parser('destroy', help='destroy a filesystem')
     destroy.add_argument('filesystem')
