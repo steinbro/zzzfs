@@ -65,6 +65,10 @@ def zzzfs_main(argv):
         '-o', metavar='all | field[,field...]', type=PropertyList,
         default=PropertyList('all'), dest='headers',
         help='comma-separated list of fields (name, property, value, source)')
+    get.add_argument(
+        '-s', metavar='source[,source...]', type=PropertyList, dest='sources',
+        default=PropertyList('local,inherited'),
+        help='comma-separated list of sources (local, inherited)')
 
     inherit = subparsers.add_parser(
         'inherit', help='unset a property from datasets')

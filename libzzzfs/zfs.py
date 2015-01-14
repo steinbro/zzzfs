@@ -87,33 +87,37 @@ def diff(identifier, other_identifier):
     return '\n'.join(output)
 
 
-def get(properties, identifiers, headers, scriptable_mode):
+def get(properties, identifiers, headers, sources, scriptable_mode):
     '''Get a set of properties for a set of datasets.'''
     all_headers = ['name', 'property', 'value', 'source']
     if headers.items == ['all']:
         headers.items = all_headers
     headers.validate_against(all_headers)
+    sources.validate_against(['local', 'inherited'])
 
     datasets = [get_dataset_by(identifier) for identifier in identifiers]
     attrs = []
     for dataset in datasets:
         if properties.items == ['all']:
-            for key, val in dataset.get_local_properties().iteritems():
-                attrs.append({
-                    'name': dataset.name, 'property': key, 'value': val,
-                    'source': 'local'})
+            if 'local' in sources.items:
+                for key, val in dataset.get_local_properties().iteritems():
+                    attrs.append({
+                        'name': dataset.name, 'property': key, 'value': val,
+                        'source': 'local'})
 
-            for key, val in dataset.get_inherited_properties().iteritems():
-                attrs.append({
-                    'name': dataset.name, 'property': key, 'value': val,
-                    'source': 'inherited'})
+            if 'inherited' in sources.items:
+                for key, val in dataset.get_inherited_properties().iteritems():
+                    attrs.append({
+                        'name': dataset.name, 'property': key, 'value': val,
+                        'source': 'inherited'})
 
         else:
             for p in properties.items:
                 val, source = dataset.get_property_and_source(p)
-                attrs.append({
-                    'name': dataset.name, 'property': p, 'value': val,
-                    'source': source})
+                if source in sources.items:
+                    attrs.append({
+                        'name': dataset.name, 'property': p, 'value': val,
+                        'source': source})
 
     return tabulated(attrs, headers, scriptable_mode)
 

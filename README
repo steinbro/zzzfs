@@ -11,8 +11,8 @@ checksumming, copy-on-write, etc.
 
 Note that this is distinct from the ZFS feature allowing a zpool to be created
 using a regular file as a vdev. ZzzFS translates commands into move/copy/symlink
-operations on the original filesystem; it does not actually directly manage
-blocks in a virtual file.
+operations in the original filesystem; it does not manage blocks in a virtual
+disk.
 
 
 This is a functional work in progress; don't trust any important data to it

@@ -187,18 +187,23 @@ class ZFSTest(ZzzFSTestBase):
         self.zzzcmd('zzzfs create foo/subfoo')
         self.zzzcmd('zzzfs set myvar=nothing foo')
         self.assertEqual(
-            'nothing', self.zzzcmd('zzzfs get -H -o value myvar foo/subfoo'))
+            'nothing',
+            self.zzzcmd('zzzfs get -H -o value -s inherited myvar foo/subfoo'))
         self.assertEqual(
-            'inherited', self.zzzcmd('zzzfs get -H -o source myvar foo/subfoo'))
+            'nothing', self.zzzcmd('zzzfs get -H -o value -s local myvar foo'))
+        # foo/subfoo should have no local value for myvar
+        self.assertEqual(
+            '', self.zzzcmd('zzzfs get -H -s local myvar foo/subfoo'))
+        # should appear in "get all", when source matches
+        self.assertIn(
+            'nothing', self.zzzcmd('zzzfs get -H -o value -s local all foo'))
+        self.assertNotIn(
+            'nothing',
+            self.zzzcmd('zzzfs get -H -o value -s inherited all foo'))
 
-        self.assertEqual(
-            'nothing', self.zzzcmd('zzzfs get -H -o value myvar foo'))
-        self.assertEqual(
-            'local', self.zzzcmd('zzzfs get -H -o source myvar foo'))
-
+        # invalid headers/property names
         with self.assertRaises(ZzzFSException):
             self.zzzcmd('zzzfs get -o no,such,headers myvar foo')
-
         with self.assertRaises(ZzzFSException):
             self.zzzcmd('zzzfs set bad/var/name=something foo')
 
