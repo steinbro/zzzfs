@@ -57,9 +57,9 @@ class ZzzFSTestBase(unittest.TestCase):
     # helper functions
     def all_files_in(self, directory):
         '''Returns all descendant files of directory with relative paths.'''
-        return [os.path.join(dirpath[len(directory)+1:], f)
+        return sorted(os.path.join(dirpath[len(directory)+1:], f)
                 for dirpath, dirnames, filenames in os.walk(directory)
-                for f in filenames]
+                for f in filenames)
 
     def populate_randomly(self, directory, max_subdirs=10, max_depth=3):
         '''Creates a set of (randomly) between 1 and max_subdirs subdirectories
