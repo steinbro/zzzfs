@@ -217,8 +217,11 @@ class Pool(Dataset):
             os.environ.get('ZZZFS_ROOT', ZZZFS_DEFAULT_ROOT))
 
     def create(self, disk):
+        if os.path.exists(disk) and len(os.listdir(disk)) != 0:
+            raise ZzzFSException, '%s: disk in use' % self.name
+
         os.makedirs(self.root)
-        pool_target = os.path.join(disk, self.name)
+        pool_target = os.path.join(os.path.abspath(disk), self.name)
         os.makedirs(pool_target)
         os.symlink(pool_target, self.data)
 

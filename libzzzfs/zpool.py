@@ -21,19 +21,14 @@
 
 # Copyright (c) 2015 Daniel W. Steinbrook. All rights reserved.
 
-import os
-
 from dataset import Pool
-from util import PropertyList, tabulated, ZzzFSException
+from util import tabulated, ZzzFSException
 
 
 def create(pool_name, disk):
     '''Add a pool in the specified directory.'''
-    if os.path.exists(disk) and len(os.listdir(disk)) != 0:
-        raise ZzzFSException, '%s: disk in use' % pool_name
-
     pool = Pool(pool_name, should_exist=False)
-    pool.create(os.path.abspath(disk))
+    pool.create(disk)
     return pool
 
 
@@ -42,22 +37,21 @@ def destroy(pool_name):
     Pool(pool_name, should_exist=True).destroy()
 
 
-def history(pool_names=[], long_format=False):
+def history(pool_names, long_format):
     pools = Pool.all()
     if pool_names:
         pools = [Pool(p, should_exist=True) for p in pool_names]
 
     output = []
     for pool in pools:
+        # Each pool will have at least one history record (zzzpool create).
         output.append('History for %r:' % pool.name)
         output += pool.get_history(long_format)
 
     return '\n'.join(output)
 
 
-def list(pool_name=None,
-         headers=PropertyList('name,size,alloc,free,cap,health,altroot'),
-         scriptable_mode=False):
+def list(pool_name, headers, scriptable_mode):
     '''List all pools.'''
     headers.validate_against([
         'name', 'size', 'alloc', 'free', 'cap', 'health', 'altroot'])
