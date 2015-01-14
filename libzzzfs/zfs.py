@@ -27,8 +27,7 @@ import shutil
 import filecmp
 
 from dataset import get_dataset_by, Filesystem, Pool, Snapshot
-from util import (
-    PropertyList, tabulated, validate_component_name, ZzzFSException)
+from util import tabulated, validate_component_name, ZzzFSException
 
 
 # Each method returns a string to be written to stdout, or a dataset (or list
@@ -88,13 +87,12 @@ def diff(identifier, other_identifier):
     return '\n'.join(output)
 
 
-def get(properties=PropertyList('all'), identifiers=[],
-        headers=PropertyList('all'), scriptable_mode=False):
+def get(properties, identifiers, headers, scriptable_mode):
     '''Get a set of properties for a set of datasets.'''
+    all_headers = ['name', 'property', 'value', 'source']
     if headers.items == ['all']:
-        headers = PropertyList('name,property,value,source')
-    else:
-        headers.validate_against(['name', 'property', 'value', 'source'])
+        headers.items = all_headers
+    headers.validate_against(all_headers)
 
     datasets = [get_dataset_by(identifier) for identifier in identifiers]
     attrs = []
@@ -120,7 +118,7 @@ def get(properties=PropertyList('all'), identifiers=[],
     return tabulated(attrs, headers, scriptable_mode)
 
 
-def inherit(property, identifiers=[]):
+def inherit(property, identifiers):
     '''Remove a local property from a set of datasets.'''
     if not validate_component_name(property):
         raise ZzzFSException, '%s: invalid property' % property
@@ -135,8 +133,7 @@ def inherit(property, identifiers=[]):
     return datasets
 
 
-def list(types=PropertyList('filesystems'), scriptable_mode=False,
-         headers=PropertyList('name,used,available,refer,mountpoint')):
+def list(types, scriptable_mode, headers):
     '''Tabulate a set of properties for a set of datasets.'''
     types.validate_against(['all', 'filesystems', 'snapshots', 'snap'])
 

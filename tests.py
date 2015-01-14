@@ -28,9 +28,9 @@ import tempfile
 import unittest
 import cStringIO
 
-from libzzzfs import zfs, zpool
+from libzzzfs import zfs
 from libzzzfs.dataset import get_dataset_by
-from libzzzfs.util import PropertyList, ZzzFSException
+from libzzzfs.util import ZzzFSException
 from zzzfs import zzzfs_main
 from zzzpool import zzzpool_main
 
@@ -44,12 +44,12 @@ class ZzzFSTestBase(unittest.TestCase):
 
         self.zroot1 = tempfile.mkdtemp()
         self.zroot2 = tempfile.mkdtemp()
-        zpool.create('foo', self.zroot1)
-        zpool.create('bar', self.zroot2)
+        self.zzzcmd('zzzpool create foo ' + self.zroot1)
+        self.zzzcmd('zzzpool create bar ' + self.zroot2)
 
     def tearDown(self):
-        zpool.destroy('foo')
-        zpool.destroy('bar')
+        self.zzzcmd('zzzpool destroy foo')
+        self.zzzcmd('zzzpool destroy bar')
         shutil.rmtree(self.zroot1)
         shutil.rmtree(self.zroot2)
         shutil.rmtree(self.zzzfs_root)
@@ -81,60 +81,59 @@ class ZzzFSTestBase(unittest.TestCase):
         os.remove(os.path.join(directory, random.choice(
             self.all_files_in(directory))))
 
+    def zzzcmd(self, cmdline):
+        '''Given a command line string, call zzzfs_main/zzzpool_main, to
+        exercise argparse code.
+        '''
+        args = cmdline.split(' ')
+        return globals()[args[0] + '_main'](args)
+
 
 class ZPoolTest(ZzzFSTestBase):
-    def zzzcmd(self, cmdline):
-        args = cmdline.split(' ')
-        globals()[args[0] + '_main'](args)
-
     def test_zpool_create_destroy(self):
         # create when already exists
         with self.assertRaises(ZzzFSException):
-            zpool.create('foo', self.zroot1)
+            self.zzzcmd('zzzpool create foo ' + self.zroot1)
 
-        zpool.destroy('foo')
+        self.zzzcmd('zzzpool destroy foo')
 
         # destroy twice
         with self.assertRaises(ZzzFSException):
-            zpool.destroy('foo')
+            self.zzzcmd('zzzpool destroy foo')
 
         # re-create, so tearDown won't complain
-        zpool.create('foo', self.zroot1)
+        self.zzzcmd('zzzpool create foo ' + self.zroot1)
 
     def test_zpool_history(self):
-        zpool.destroy('foo')
-        self.zzzcmd('zzzpool create foo ' + self.zroot1)
-        self.assertIn('zzzpool create foo', zpool.history(['foo']))
+        self.assertIn('zzzpool create foo', self.zzzcmd('zzzpool history foo'))
 
         # zzzfs commands should also show up in zzzpool history
         self.zzzcmd('zzzfs create foo/subfs')
-        self.assertIn('zzzfs create foo/subfs', zpool.history(['foo']))
+        self.assertIn(
+            'zzzfs create foo/subfs', self.zzzcmd('zzzpool history foo'))
 
         # old entries should still be present
-        self.assertIn('zzzpool create foo', zpool.history(['foo']))
+        self.assertIn('zzzpool create foo', self.zzzcmd('zzzpool history foo'))
 
         # inconsequential zzzfs commands shouldn't show up
         self.zzzcmd('zzzfs get all foo')
-        self.assertNotIn('zzzfs list', zpool.history(['foo']))
+        self.assertNotIn('zzzfs list', self.zzzcmd('zzzpool history foo'))
 
     def test_zpool_list(self):
-        output = zpool.list(scriptable_mode=True)
-        self.assertIn('foo', output)
-        self.assertIn('bar', output)
+        self.assertIn('foo', self.zzzcmd('zzzpool list -H'))
+        self.assertIn('bar', self.zzzcmd('zzzpool list -H'))
 
         # custom headers, lacking name
-        output = zpool.list(headers=PropertyList('health'))
-        self.assertIn('ONLINE', output)
-        self.assertNotIn('foo', output)
+        self.assertIn('ONLINE', self.zzzcmd('zzzpool list -o health'))
+        self.assertNotIn('foo', self.zzzcmd('zzzpool list -o health'))
 
         # list specific pool
-        output = zpool.list('foo', scriptable_mode=True)
-        self.assertIn('foo', output)
-        self.assertNotIn('bar', output)
+        self.assertIn('foo', self.zzzcmd('zzzpool list -H foo'))
+        self.assertNotIn('bar', self.zzzcmd('zzzpool list -H foo'))
 
         # list with non-existent pool
         with self.assertRaises(ZzzFSException):
-            zpool.list('baz')
+            self.zzzcmd('zzzpool list baz')
 
 
 class ZFSTest(ZzzFSTestBase):
@@ -152,103 +151,92 @@ class ZFSTest(ZzzFSTestBase):
 
     def test_zfs_get_set(self):
         # local vs.inherited properties
-        zfs.create('foo/subfoo')
-        zfs.set('myvar=nothing', ['foo'])
-        self.assertEqual('nothing', zfs.get(
-            PropertyList('myvar'), ['foo/subfoo'],
-            headers=PropertyList('value'), scriptable_mode=True))
-        self.assertEqual('inherited', zfs.get(
-            PropertyList('myvar'), ['foo/subfoo'],
-            headers=PropertyList('source'), scriptable_mode=True))
+        self.zzzcmd('zzzfs create foo/subfoo')
+        self.zzzcmd('zzzfs set myvar=nothing foo')
+        self.assertEqual(
+            'nothing', self.zzzcmd('zzzfs get -H -o value myvar foo/subfoo'))
+        self.assertEqual(
+            'inherited', self.zzzcmd('zzzfs get -H -o source myvar foo/subfoo'))
 
-        self.assertEqual('nothing', zfs.get(
-            PropertyList('myvar'), ['foo'],
-            headers=PropertyList('value'), scriptable_mode=True).strip())
-        self.assertEqual('local', zfs.get(
-            PropertyList('myvar'), ['foo'],
-            headers=PropertyList('source'), scriptable_mode=True).strip())
+        self.assertEqual(
+            'nothing', self.zzzcmd('zzzfs get -H -o value myvar foo'))
+        self.assertEqual(
+            'local', self.zzzcmd('zzzfs get -H -o source myvar foo'))
 
         with self.assertRaises(ZzzFSException):
-            zfs.get(PropertyList('myvar'), ['foo'],
-                headers=PropertyList('no,such,headers'))
+            self.zzzcmd('zzzfs get -o no,such,headers myvar foo')
 
         with self.assertRaises(ZzzFSException):
-            zfs.set('bad/var/name=something', ['foo'])
+            self.zzzcmd('zzzfs set bad/var/name=something foo')
 
     def test_zfs_inherit(self):
-        zfs.create('foo/subfoo')
-        zfs.set('myvar=nothing', ['foo'])
-        zfs.set('myvar=something', ['foo/subfoo'])
-        self.assertEqual('nothing', zfs.get(
-            PropertyList('myvar'), ['foo'],
-            headers=PropertyList('value'), scriptable_mode=True))
-        self.assertEqual('something', zfs.get(
-            PropertyList('myvar'), ['foo/subfoo'],
-            headers=PropertyList('value'), scriptable_mode=True))
+        self.zzzcmd('zzzfs create foo/subfoo')
+        self.zzzcmd('zzzfs set myvar=nothing foo')
+        self.zzzcmd('zzzfs set myvar=something foo/subfoo')
+        self.assertEqual(
+            'nothing', self.zzzcmd('zzzfs get -H -o value myvar foo'))
+        self.assertEqual(
+            'something', self.zzzcmd('zzzfs get -H -o value myvar foo/subfoo'))
 
-        zfs.inherit('myvar', ['foo/subfoo'])
-        self.assertEqual('nothing', zfs.get(
-            PropertyList('myvar'), ['foo/subfoo'],
-            headers=PropertyList('value'), scriptable_mode=True))
-        self.assertEqual('inherited', zfs.get(
-            PropertyList('myvar'), ['foo/subfoo'],
-            headers=PropertyList('source'), scriptable_mode=True))
+        self.zzzcmd('zzzfs inherit myvar foo/subfoo')
+        self.assertEqual(
+            'nothing', self.zzzcmd('zzzfs get -H -o value myvar foo/subfoo'))
+        self.assertEqual(
+            'inherited', self.zzzcmd('zzzfs get -H -o source myvar foo/subfoo'))
 
     def test_zfs_list(self):
         # creation of zpool implicitly creates default ZFS lsit
-        self.assertIn('foo', zfs.list(
-            headers=PropertyList('name'), scriptable_mode=True))
-        self.assertIn('bar', zfs.list(
-            headers=PropertyList('name'), scriptable_mode=True))
+        self.assertIn('foo', self.zzzcmd('zzzfs list -H -o name'))
+        self.assertIn('bar', self.zzzcmd('zzzfs list -H -o name'))
 
-        zfs.create('foo/subfoo')
-        self.assertIn('foo/subfoo', zfs.list(
-            headers=PropertyList('name'), scriptable_mode=True))
+        self.zzzcmd('zzzfs create foo/subfoo')
+        self.assertIn('foo/subfoo', self.zzzcmd('zzzfs list -H -o name'))
 
-        self.assertIn(os.path.join(self.zroot1, 'foo', 'subfoo'), zfs.list(
-            headers=PropertyList('mountpoint'), scriptable_mode=True))
+        self.assertIn(os.path.join(self.zroot1, 'foo', 'subfoo'), self.zzzcmd(
+            'zzzfs list -H -o mountpoint'))
 
-        zfs.create('foo/subfoo/subsubfoo')
-        self.assertIn('foo/subfoo/subsubfoo', zfs.list(
-            headers=PropertyList('name'), scriptable_mode=True))
+        self.zzzcmd('zzzfs create foo/subfoo/subsubfoo')
+        self.assertIn(
+            'foo/subfoo/subsubfoo', self.zzzcmd('zzzfs list -H -o name'))
 
         with self.assertRaises(ZzzFSException):
-            zfs.list(types=PropertyList('no,such,types'))
+            self.zzzcmd('zzzfs list -t no,such,types')
+
+        # custom field names shouldn't throw an exception
+        self.zzzcmd('zzzfs list -o no,such,headers')
 
     def test_zfs_snapshot(self):
         self.populate_randomly(os.path.join(self.zroot1, 'foo'))
-        zfs.snapshot(['foo@first'])
-        self.assertIn('foo@first', zfs.list(types=PropertyList('snapshots')))
+        self.zzzcmd('zzzfs snapshot foo@first')
+        self.assertIn('foo@first', self.zzzcmd('zzzfs list -t snapshots'))
 
     def test_zfs_rollback(self):
         # both files and properties should be restored
         foo_path = os.path.join(self.zroot1, 'foo')
         self.populate_randomly(foo_path)
-        zfs.set('myvar=nothing', ['foo'])
+        self.zzzcmd('zzzfs set myvar=nothing foo')
 
-        zfs.snapshot(['foo@first'])
+        self.zzzcmd('zzzfs snapshot foo@first')
         contents_before = self.all_files_in(foo_path)
 
         # change a property, remove a file
-        zfs.set('myvar=something', ['foo'])
+        self.zzzcmd('zzzfs set myvar=something foo')
         self.delete_something_in(foo_path)
         self.assertNotEqual(self.all_files_in(foo_path), contents_before)
-        self.assertEqual('something', zfs.get(
-            PropertyList('myvar'), ['foo'], headers=PropertyList('value'),
-            scriptable_mode=True))
+        self.assertEqual(
+            'something', self.zzzcmd('zzzfs get -H -o value myvar foo'))
 
-        zfs.rollback('foo@first')
+        self.zzzcmd('zzzfs rollback foo@first')
 
         self.assertEqual(self.all_files_in(foo_path), contents_before)
-        self.assertEqual('nothing', zfs.get(
-            PropertyList('myvar'), ['foo'], headers=PropertyList('value'),
-            scriptable_mode=True))
+        self.assertEqual(
+            'nothing', self.zzzcmd('zzzfs get -H -o value myvar foo'))
 
     def test_zfs_send_receive(self):
-        zfs.create('foo/origin')
+        self.zzzcmd('zzzfs create foo/origin')
         foo_path = os.path.join(self.zroot1, 'foo', 'origin')
         self.populate_randomly(foo_path)
-        zfs.snapshot(['foo/origin@first'])
+        self.zzzcmd('zzzfs snapshot foo/origin@first')
 
         # use file-like object to simulate pipe
         buf = cStringIO.StringIO()
@@ -256,7 +244,7 @@ class ZFSTest(ZzzFSTestBase):
         buf.seek(0)
         zfs.receive('foo/received', stream=buf)
 
-        self.assertIn('foo/received', zfs.list(scriptable_mode=True))
+        self.assertIn('foo/received', self.zzzcmd('zzzfs list -H'))
         self.assertEqual(
             self.all_files_in(os.path.join(self.zroot1, 'foo', 'origin')),
             self.all_files_in(os.path.join(self.zroot1, 'foo', 'received')))
@@ -266,76 +254,76 @@ class ZFSTest(ZzzFSTestBase):
             zfs.receive('foo/newer', stream=cStringIO.StringIO('not snapshot'))
 
         # if receive failed, filesystem should not have been created
-        self.assertNotIn('foo/newer', zfs.list())
+        self.assertNotIn('foo/newer', self.zzzcmd('zzzfs list'))
 
     def test_zfs_diff(self):
         foo_path = os.path.join(self.zroot1, 'foo')
         self.populate_randomly(foo_path)
-        zfs.snapshot(['foo@first'])
+        self.zzzcmd('zzzfs snapshot foo@first')
 
         self.delete_something_in(foo_path)
-        self.assertTrue(zfs.diff('foo@first', 'foo').startswith('-\t'))
+        self.assertTrue(
+            self.zzzcmd('zzzfs diff foo@first foo').startswith('-\t'))
 
     def test_zfs_rename(self):
         something_path = os.path.join(self.zroot1, 'foo', 'something')
         subfoo_path = os.path.join(self.zroot1, 'foo', 'subfoo')
-        zfs.create('foo/something')
-        zfs.set('myvar=something', ['foo/something'])
+        self.zzzcmd('zzzfs create foo/something')
+        self.zzzcmd('zzzfs set myvar=something foo/something')
         self.populate_randomly(something_path)
         contents_before = self.all_files_in(something_path)
 
-        zfs.rename('foo/something', 'foo/subfoo')
+        self.zzzcmd('zzzfs rename foo/something foo/subfoo')
 
         self.assertTrue(os.path.exists(subfoo_path))
         self.assertFalse(os.path.exists(something_path))
         # properties should have been preserved
-        self.assertEqual('something', zfs.get(
-            PropertyList('myvar'), ['foo/subfoo'],
-            headers=PropertyList('value'), scriptable_mode=True))
+        self.assertEqual(
+            'something', self.zzzcmd('zzzfs get -H -o value myvar foo/subfoo'))
         # files should have been preserved
         self.assertEqual(contents_before, self.all_files_in(subfoo_path))
 
-        zfs.snapshot(['foo/subfoo@first'])
-        zfs.rename('foo/subfoo@first', 'foo/subfoo@second')
+        self.zzzcmd('zzzfs snapshot foo/subfoo@first')
+        self.zzzcmd('zzzfs rename foo/subfoo@first foo/subfoo@second')
 
         self.assertNotIn(
-            'foo/subfoo@first', zfs.list(types=PropertyList('snapshots')))
+            'foo/subfoo@first', self.zzzcmd('zzzfs list -t snapshots'))
         self.assertIn(
-            'foo/subfoo@second', zfs.list(types=PropertyList('snapshots')))
+            'foo/subfoo@second', self.zzzcmd('zzzfs list -t snapshots'))
 
-        zfs.snapshot(['foo/subfoo@third'])
-        zfs.rename('foo/subfoo@third', 'fourth')
+        self.zzzcmd('zzzfs snapshot foo/subfoo@third')
+        self.zzzcmd('zzzfs rename foo/subfoo@third fourth')
 
         self.assertNotIn(
-            'foo/subfoo@third', zfs.list(types=PropertyList('snapshots')))
+            'foo/subfoo@third', self.zzzcmd('zzzfs list -t snapshots'))
         self.assertIn(
-            'foo/subfoo@fourth', zfs.list(types=PropertyList('snapshots')))
+            'foo/subfoo@fourth', self.zzzcmd('zzzfs list -t snapshots'))
 
         with self.assertRaises(ZzzFSException):
-            zfs.rename('foo/subfoo@first', 'foo@first')
+            self.zzzcmd('zzzfs rename foo/subfoo@first foo@first')
 
     def test_zfs_clone_promote(self):
         # sample use case from FreeBSD man zfs(8), example #10
         production_path = os.path.join(self.zroot1, 'foo', 'production')
         beta_path = os.path.join(self.zroot1, 'foo', 'beta')
 
-        zfs.create('foo/production')
+        self.zzzcmd('zzzfs create foo/production')
         self.populate_randomly(production_path)
-        zfs.snapshot(['foo/production@today'])
+        self.zzzcmd('zzzfs snapshot foo/production@today')
 
-        zfs.clone('foo/production@today', 'foo/beta')
+        self.zzzcmd('zzzfs clone foo/production@today foo/beta')
         self.assertEqual(
             self.all_files_in(beta_path), self.all_files_in(production_path))
 
         self.delete_something_in(beta_path)
         beta_contents = self.all_files_in(beta_path)
-        zfs.promote('foo/beta')
-        zfs.rename('foo/production', 'foo/legacy')
-        zfs.rename('foo/beta', 'foo/production')
-        zfs.destroy('foo/legacy')
+        self.zzzcmd('zzzfs promote foo/beta')
+        self.zzzcmd('zzzfs rename foo/production foo/legacy')
+        self.zzzcmd('zzzfs rename foo/beta foo/production')
+        self.zzzcmd('zzzfs destroy foo/legacy')
 
         self.assertEqual(self.all_files_in(production_path), beta_contents)
-        self.assertNotIn('foo/beta', zfs.list())
+        self.assertNotIn('foo/beta', self.zzzcmd('zzzfs list'))
 
 
 if __name__ == '__main__':
