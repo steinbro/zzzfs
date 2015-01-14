@@ -234,11 +234,10 @@ def set(keyval, identifiers):
 
 def snapshot(snapshots):
     '''Create a snapshot of a filesystem.'''
-    datasets = [get_dataset_by(
-        i, should_be=Snapshot, should_exist=False) for i in snapshots]
-    for dataset in datasets:
+    for i in snapshots:
+        dataset = get_dataset_by(i, should_be=Snapshot, should_exist=False)
         if not dataset.filesystem.exists():
             raise ZzzFSException, (
                 '%s: no such filesystem' % dataset.filesystem.name)
         dataset.create()
-    return datasets
+        yield dataset

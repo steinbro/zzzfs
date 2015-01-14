@@ -119,6 +119,12 @@ class ZPoolTest(ZzzFSTestBase):
         self.zzzcmd('zzzfs get all foo')
         self.assertNotIn('zzzfs list', self.zzzcmd('zzzpool history foo'))
 
+        # signle command affecting multiple pools is logged once in each pool
+        self.zzzcmd('zzzfs snapshot foo@first bar@first bar@second')
+        self.assertIn('zzzfs snapshot', self.zzzcmd('zzzpool history foo'))
+        self.assertEqual(
+            self.zzzcmd('zzzpool history foo').count('zzzfs snapshot'), 1)
+
     def test_zpool_list(self):
         self.assertIn('foo', self.zzzcmd('zzzpool list -H'))
         self.assertIn('bar', self.zzzcmd('zzzpool list -H'))
@@ -209,6 +215,17 @@ class ZFSTest(ZzzFSTestBase):
         self.populate_randomly(os.path.join(self.zroot1, 'foo'))
         self.zzzcmd('zzzfs snapshot foo@first')
         self.assertIn('foo@first', self.zzzcmd('zzzfs list -t snapshots'))
+
+        # multiple snapshots can be specified in the same command
+        self.zzzcmd('zzzfs snapshot foo@second foo@third')
+        self.assertIn('foo@second', self.zzzcmd('zzzfs list -t snapshots'))
+        self.assertIn('foo@third', self.zzzcmd('zzzfs list -t snapshots'))
+
+        # duplicate snapshot names should fail cleanly
+        with self.assertRaises(ZzzFSException):
+            self.zzzcmd('zzzfs snapshot foo@fourth foo@fourth')
+        # should have been created once, anyway
+        self.assertIn('foo@fourth', self.zzzcmd('zzzfs list -t snapshots'))
 
     def test_zfs_rollback(self):
         # both files and properties should be restored
