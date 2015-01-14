@@ -167,6 +167,21 @@ class ZFSTest(ZzzFSTestBase):
         self.assertTrue(
             get_dataset_by('foo/missing/subfoo', should_exist=None).exists())
 
+    def test_zfs_destroy(self):
+        # directory in pool data should be removed
+        self.zzzcmd('zzzfs create -p foo/subfoo')
+        self.zzzcmd('zzzfs destroy foo/subfoo')
+        self.assertFalse(
+            os.path.exists(os.path.join(self.zroot1, 'foo', 'subfoo')))
+
+        # destroy should remove any child filesystems
+        self.zzzcmd('zzzfs create -p foo/la/dee/da/subfoo')
+        self.zzzcmd('zzzfs destroy foo/la/dee/da')
+        self.assertFalse(
+            get_dataset_by('foo/la/dee/da/subfoo', should_exist=None).exists())
+        self.assertTrue(
+            get_dataset_by('foo/la/dee', should_exist=None).exists())
+
     def test_zfs_get_set(self):
         # local vs.inherited properties
         self.zzzcmd('zzzfs create foo/subfoo')

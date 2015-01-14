@@ -229,9 +229,7 @@ class Pool(Dataset):
         Filesystem(self.name).create()
 
     def destroy(self):
-        if not os.path.exists(os.path.realpath(self.data)):
-            logger.warning('%s: pool has already been destroyed', self.name)
-        else:
+        if os.path.exists(os.path.realpath(self.data)):
             shutil.rmtree(os.path.realpath(self.data))
         shutil.rmtree(self.root)
 
@@ -348,7 +346,15 @@ class Filesystem(Dataset):
         #    self.pool.get_filesystems())
 
     def destroy(self):
+        # user may have already deleted data
+        if os.path.exists(self.mountpoint):
+            shutil.rmtree(self.mountpoint)
         shutil.rmtree(self.root)
+
+        # delete any child filesystems
+        for f in self.pool.get_filesystems():
+            if f.name.startswith(self.name):
+                f.destroy()
 
     def rollback_to(self, snapshot):
         shutil.rmtree(self.mountpoint)
