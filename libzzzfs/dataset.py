@@ -45,10 +45,14 @@
 #     [...]
 
 import os
+import csv
+import pwd
 import gzip
 import shutil
 import logging
 import tarfile
+import datetime
+import platform
 import cStringIO
 
 from util import validate_component_name, ZzzFSException
@@ -92,6 +96,11 @@ def get_dataset_by(dataset_name, should_be=None, should_exist=True):
         raise ZzzFSException, '%s: no such dataset' % dataset_name
     if obj.exists() and should_exist == False:
         raise ZzzFSException, '%s: dataset exists' % dataset_name
+
+    # pool should exist, even if dataset itself shouldn't
+    #logger.debug('%s, in pool %s', obj, obj.pool)
+    if not obj.pool.exists():
+        raise ZzzFSException, '%s: no such pool' % obj.pool.name
 
     return obj
 
@@ -173,7 +182,7 @@ class Dataset(object):
 
 
 class Pool(Dataset):
-    def __init__(self, name):
+    def __init__(self, name, should_exist=None):
         self.name = name
 
         zzzfs_root = os.environ.get('ZZZFS_ROOT', ZZZFS_DEFAULT_ROOT)
@@ -182,6 +191,12 @@ class Pool(Dataset):
 
         self.root = os.path.join(zzzfs_root, self.name)
         self.filesystems = os.path.join(self.root, 'filesystems')
+        self.history = os.path.join(self.root, 'history')
+
+        if should_exist and not self.exists():
+            raise ZzzFSException, '%s: no such pool' % self.name
+        if should_exist == False and self.exists():
+            raise ZzzFSException, '%s: pool exists' % self.name
 
     def get_parent(self):
         # pool is the top-most desendent of any dataset
@@ -221,6 +236,34 @@ class Pool(Dataset):
         # unescape slashes when instantiating Filesystem object
         return [Filesystem(x.replace('%', '/'))
             for x in os.listdir(self.filesystems)]
+
+    def get_history(self, long_format=False):
+        try:
+            with open(self.history, 'rb') as f:
+                history = csv.reader(f)
+                for (date, command, user, host) in history:
+                    if long_format:
+                        yield '%s %s [user %s on %s]' % (date, command, user, host)
+                    else:
+                        yield '%s %s' % (date, command)
+
+        except IOError:
+            # no logged history
+            pass
+
+    def log_history_event(self, argv, date=None, user=None, host=None):
+        command = ' '.join(argv)
+        if not date:  # default date is now
+            date = datetime.datetime.now()
+        if not user:  # default user is user executing this script
+            user = pwd.getpwuid(os.getuid()).pw_name
+        if not host:  # default host is the current platform host
+            host = platform.node()
+
+        with open(self.history, 'a') as f:
+            history = csv.writer(f)
+            history.writerow(
+                [date.strftime('%Y-%m-%d.%H:%M:%S'), command, user, host])
 
 
 class Filesystem(Dataset):

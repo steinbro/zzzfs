@@ -31,6 +31,9 @@ from util import (
     PropertyList, tabulated, validate_component_name, ZzzFSException)
 
 
+# Each method returns a string to be written to stdout, or a dataset (or list
+# of datasets) affected by the command.
+
 def clone(snapshot, filesystem):
     '''Turn a snapshot into a filesystem with a new name.'''
     dataset1 = get_dataset_by(snapshot, should_be=Snapshot)
@@ -38,21 +41,22 @@ def clone(snapshot, filesystem):
         filesystem, should_be=Filesystem, should_exist=False)
 
     dataset1.clone_to(dataset2)
+    return [dataset1, dataset2]
 
 
 def create(filesystem):
     '''Create a filesystem.'''
     dataset = get_dataset_by(
         filesystem, should_be=Filesystem, should_exist=False)
-    # pool should exist, even though dataset itself shouldn't
-    if not dataset.pool.exists():
-        raise ZzzFSException, '%s: no such pool' % dataset.pool.name
     dataset.create()
+    return dataset
 
 
 def destroy(filesystem):
     '''Remove a filesystem.'''
-    get_dataset_by(filesystem, should_be=Filesystem).destroy()
+    dataset = get_dataset_by(filesystem, should_be=Filesystem)
+    dataset.destroy()
+    return dataset
 
 
 def diff(identifier, other_identifier):
@@ -128,6 +132,7 @@ def inherit(property, identifiers=[]):
         except OSError:
             # property was not set locally
             pass
+    return datasets
 
 
 def list(types=PropertyList('filesystems'), scriptable_mode=False,
@@ -153,7 +158,9 @@ def list(types=PropertyList('filesystems'), scriptable_mode=False,
 def promote(clone_filesystem):
     '''Turn a cloned snapshot into a standalone filesystem.'''
     # Since there are no actual dependencies in ZzzFS, this is a no-op.
-    get_dataset_by(clone_filesystem, should_be=Filesystem, should_exist=True)
+    dataset = get_dataset_by(
+        clone_filesystem, should_be=Filesystem, should_exist=True)
+    return dataset
 
 
 def receive(filesystem, stream=sys.stdin):
@@ -162,10 +169,8 @@ def receive(filesystem, stream=sys.stdin):
     '''
     dataset = get_dataset_by(
         filesystem, should_be=Filesystem, should_exist=False)
-    # pool should exist, even though dataset itself shouldn't
-    if not dataset.pool.exists():
-        raise ZzzFSException, '%s: no such pool' % dataset.pool.name
     dataset.create(from_stream=stream)
+    return dataset
 
 
 def rename(identifier, other_identifier):
@@ -174,8 +179,7 @@ def rename(identifier, other_identifier):
     dataset2 = None  # may be filesystem or snapshot, will check below
 
     if isinstance(dataset1, Snapshot):
-        dataset2 = get_dataset_by(other_identifier, should_exist=None)
-        if isinstance(dataset2, Filesystem):
+        if not '@' in other_identifier:
             # second argument might be snapshot alone, which we'd interpret as
             # a filesystem; e.g. "rename fs@snapshot new_snapshot"
             other_identifier = '%s@%s' % (
@@ -198,17 +202,21 @@ def rename(identifier, other_identifier):
 
     # same procedure whether filesystem or snapshot
     dataset1.rename(dataset2)
+    return [dataset1, dataset2]
 
 
 def rollback(snapshot):
     '''Replace the filesystem with the contents of the spceified snapshot.'''
     dataset = get_dataset_by(snapshot, should_be=Snapshot)
     dataset.filesystem.rollback_to(dataset)
+    return dataset
 
 
 def send(snapshot, stream=sys.stdout):
     '''Create a gzipped tarball of a snapshot and write it to sdout.'''
-    get_dataset_by(snapshot, should_be=Snapshot).to_stream(stream)
+    dataset = get_dataset_by(snapshot, should_be=Snapshot)
+    dataset.to_stream(stream)
+    return dataset
 
 
 def set(keyval, identifiers):
@@ -224,6 +232,7 @@ def set(keyval, identifiers):
     datasets = [get_dataset_by(identifier) for identifier in identifiers]
     for dataset in datasets:
         dataset.add_local_property(key, val)
+    return datasets
 
 
 def snapshot(snapshots):
@@ -235,3 +244,4 @@ def snapshot(snapshots):
             raise ZzzFSException, (
                 '%s: no such filesystem' % dataset.filesystem.name)
         dataset.create()
+    return datasets

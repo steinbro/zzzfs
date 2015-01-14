@@ -32,20 +32,27 @@ def create(pool_name, disk):
     if os.path.exists(disk) and len(os.listdir(disk)) != 0:
         raise ZzzFSException, '%s: disk in use' % pool_name
 
-    pool = Pool(pool_name)
-    if pool.exists():
-        raise ZzzFSException, '%s: pool already exists' % pool_name
-
+    pool = Pool(pool_name, should_exist=False)
     pool.create(os.path.abspath(disk))
+    return pool
 
 
 def destroy(pool_name):
     '''Remove a pool.'''
-    pool = Pool(pool_name)
-    if not pool.exists():
-        raise ZzzFSException, '%s: no such pool' % pool.name
+    Pool(pool_name, should_exist=True).destroy()
 
-    pool.destroy()
+
+def history(pool_names=[], long_format=False):
+    pools = Pool.all()
+    if pool_names:
+        pools = [Pool(p, should_exist=True) for p in pool_names]
+
+    output = []
+    for pool in pools:
+        output.append('History for %r:' % pool.name)
+        output += pool.get_history(long_format)
+
+    return '\n'.join(output)
 
 
 def list(pool_name=None,
@@ -57,10 +64,7 @@ def list(pool_name=None,
 
     pools = Pool.all()
     if pool_name:
-        pool = Pool(pool_name)
-        if not pool.exists():
-            raise ZzzFSException, '%s: no such pool' % pool_name
-        pools = [pool]
+        pools = [Pool(pool_name, should_exist=True)]
 
     return tabulated(
         [{'name': p.name, 'health': 'ONLINE'} for p in pools], headers,

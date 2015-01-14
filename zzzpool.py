@@ -25,36 +25,49 @@ import sys
 import argparse
 
 from libzzzfs import zpool
-from libzzzfs.dataset import ZzzFSException
+from libzzzfs.dataset import Pool, ZzzFSException
 from libzzzfs.util import PropertyList
 
 
-if __name__ == '__main__':
+def zzzpool_main(argv):
     parser = argparse.ArgumentParser(add_help=False)
     subparsers = parser.add_subparsers(dest='command', title='subcommands')
 
     # per-command arguments
     create = subparsers.add_parser('create')
-    create.add_argument('pool_name')
+    create.add_argument('pool_name', metavar='pool')
     create.add_argument('disk')
 
     destroy = subparsers.add_parser('destroy')
-    destroy.add_argument('pool_name')
+    destroy.add_argument('pool_name', metavar='pool')
 
-    list = subparsers.add_parser('list')
-    list.add_argument('pool_name', nargs='?', default=None)
-    list.add_argument('-H', action='store_true', dest='scriptable_mode')
-    list.add_argument(
+    history = subparsers.add_parser('history')
+    history.add_argument('pool_names', metavar='pool', nargs='*', default=[])
+    history.add_argument('-l', action='store_true', dest='long_format')
+
+    list_ = subparsers.add_parser('list')
+    list_.add_argument('pool_name', nargs='?', default=None)
+    list_.add_argument('-H', action='store_true', dest='scriptable_mode')
+    list_.add_argument(
         '-o', metavar='property[,...]', type=PropertyList, dest='headers',
         default=PropertyList('name,size,alloc,free,cap,health,altroot'))
 
     # generate dict of argument keys/values
-    args = parser.parse_args()
+    args = parser.parse_args(argv[1:])
     params = dict(args._get_kwargs())
     del params['command']
 
+    retval = getattr(zpool, args.command)(**params)
+    if type(retval) is str:
+        return retval
+
+    if isinstance(retval, Pool) and args.command == 'create':
+        retval.log_history_event(argv)
+
+
+if __name__ == '__main__':
     try:
-        output = getattr(zpool, args.command)(**params)
+        output = zzzpool_main(sys.argv)
     except ZzzFSException, e:
         sys.exit('%s: %s' % (sys.argv[0], e))
 

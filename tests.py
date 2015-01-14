@@ -31,6 +31,8 @@ import cStringIO
 from libzzzfs import zfs, zpool
 from libzzzfs.dataset import get_dataset_by
 from libzzzfs.util import PropertyList, ZzzFSException
+from zzzfs import zzzfs_main
+from zzzpool import zzzpool_main
 
 
 class ZzzFSTestBase(unittest.TestCase):
@@ -81,6 +83,10 @@ class ZzzFSTestBase(unittest.TestCase):
 
 
 class ZPoolTest(ZzzFSTestBase):
+    def zzzcmd(self, cmdline):
+        args = cmdline.split(' ')
+        globals()[args[0] + '_main'](args)
+
     def test_zpool_create_destroy(self):
         # create when already exists
         with self.assertRaises(ZzzFSException):
@@ -92,8 +98,24 @@ class ZPoolTest(ZzzFSTestBase):
         with self.assertRaises(ZzzFSException):
             zpool.destroy('foo')
 
-        # re-crete, so tearDown won't complain
+        # re-create, so tearDown won't complain
         zpool.create('foo', self.zroot1)
+
+    def test_zpool_history(self):
+        zpool.destroy('foo')
+        self.zzzcmd('zzzpool create foo ' + self.zroot1)
+        self.assertIn('zzzpool create foo', zpool.history(['foo']))
+
+        # zzzfs commands should also show up in zzzpool history
+        self.zzzcmd('zzzfs create foo/subfs')
+        self.assertIn('zzzfs create foo/subfs', zpool.history(['foo']))
+
+        # old entries should still be present
+        self.assertIn('zzzpool create foo', zpool.history(['foo']))
+
+        # inconsequential zzzfs commands shouldn't show up
+        self.zzzcmd('zzzfs get all foo')
+        self.assertNotIn('zzzfs list', zpool.history(['foo']))
 
     def test_zpool_list(self):
         output = zpool.list(scriptable_mode=True)

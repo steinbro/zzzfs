@@ -24,10 +24,11 @@
 import sys
 import argparse
 from libzzzfs import zfs
+from libzzzfs.dataset import Dataset, Pool
 from libzzzfs.util import PropertyList, ZzzFSException
 
 
-if __name__ == '__main__':
+def zzzfs_main(argv):
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest='command', title='subcommands')
 
@@ -62,12 +63,12 @@ if __name__ == '__main__':
     inherit.add_argument(
         'identifiers', metavar='filesystem|snapshot', nargs='+', default=[])
 
-    list = subparsers.add_parser('list')
-    list.add_argument(
+    list_ = subparsers.add_parser('list')
+    list_.add_argument(
         '-t', metavar='type[,type...]', dest='types', type=PropertyList,
         default=PropertyList('filesystems'))
-    list.add_argument('-H', action='store_true', dest='scriptable_mode')
-    list.add_argument(
+    list_.add_argument('-H', action='store_true', dest='scriptable_mode')
+    list_.add_argument(
         '-o', metavar='property[,property...]', dest='headers',
         type=PropertyList,
         default=PropertyList('name,used,available,refer,mountpoint'))
@@ -88,9 +89,9 @@ if __name__ == '__main__':
     send = subparsers.add_parser('send')
     send.add_argument('snapshot')
 
-    set = subparsers.add_parser('set')
-    set.add_argument('keyval', metavar='property=value')
-    set.add_argument(
+    set_ = subparsers.add_parser('set')
+    set_.add_argument('keyval', metavar='property=value')
+    set_.add_argument(
         'identifiers', metavar='filesystem|snapshot', nargs='+', default=[])
 
     snap = subparsers.add_parser('snapshot')
@@ -98,12 +99,28 @@ if __name__ == '__main__':
         'snapshots', metavar='filesystem@snapname', nargs='+', default=[])
 
     # generate dict of argument keys/values
-    args = parser.parse_args()
+    args = parser.parse_args(argv[1:])
     params = dict(args._get_kwargs())
     del params['command']
 
+    retval = getattr(zfs, args.command)(**params)
+
+    if type(retval) is str:
+        return retval
+
+    elif args.command not in ('diff', 'get', 'list', 'send'):
+        # pool-modifying commands; log in pool history
+        if isinstance(retval, Dataset):
+            retval.pool.log_history_event(argv)
+        else:
+            # multiple affected datasets; only log command once per pool
+            for pool_name in list(set(dataset.pool.name for dataset in retval)):
+                Pool(pool_name).log_history_event(argv)
+
+
+if __name__ == '__main__':
     try:
-        output = getattr(zfs, args.command)(**params)
+        output = zzzfs_main(sys.argv)
     except ZzzFSException, e:
         sys.exit('%s: %s' % (sys.argv[0], e))
 
