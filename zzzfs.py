@@ -33,70 +33,83 @@ def zzzfs_main(argv):
     subparsers = parser.add_subparsers(dest='command', title='subcommands')
 
     # per-command arguments
-    clone = subparsers.add_parser('clone')
+    clone = subparsers.add_parser(
+        'clone', help='turn a snapshot into a filesystem with a new name')
     clone.add_argument('snapshot')
     clone.add_argument('filesystem')
 
-    create = subparsers.add_parser('create')
+    create = subparsers.add_parser('create', help='create a filesystem')
     create.add_argument('filesystem')
 
-    destroy = subparsers.add_parser('destroy')
+    destroy = subparsers.add_parser('destroy', help='destroy a filesystem')
     destroy.add_argument('filesystem')
 
-    diff = subparsers.add_parser('diff')
+    diff = subparsers.add_parser(
+        'diff', help='compare filesystem/snapshot against a snapshot')
     diff.add_argument('identifier', metavar='snapshot')
     diff.add_argument('other_identifier', metavar='snapshot|filesystem')
 
-    get = subparsers.add_parser('get')
+    get = subparsers.add_parser('get', help='get dataset properties')
     get.add_argument(
         'properties', metavar='all | property[,property...]', type=PropertyList,
-        default=PropertyList(''))
+        help='comma-separated list of properties')
     get.add_argument(
-        'identifiers', metavar='filesystem|snapshot', nargs='+', default=[])
-    get.add_argument('-H', action='store_true', dest='scriptable_mode')
+        'identifiers', metavar='filesystem|snapshot', nargs='+')
+    get.add_argument(
+        '-H', action='store_true', dest='scriptable_mode',
+        help='scripted mode (no headers, tab-delimited)')
     get.add_argument(
         '-o', metavar='all | field[,field...]', type=PropertyList,
-        default=PropertyList('all'), dest='headers')
+        default=PropertyList('all'), dest='headers',
+        help='comma-separated list of fields (name, property, value, source)')
 
-    inherit = subparsers.add_parser('inherit')
+    inherit = subparsers.add_parser(
+        'inherit', help='unset a property from datasets')
     inherit.add_argument('property')
     inherit.add_argument(
-        'identifiers', metavar='filesystem|snapshot', nargs='+', default=[])
+        'identifiers', metavar='filesystem|snapshot', nargs='+')
 
-    list_ = subparsers.add_parser('list')
+    list_ = subparsers.add_parser('list', help='list datasets')
     list_.add_argument(
         '-t', metavar='type[,type...]', dest='types', type=PropertyList,
-        default=PropertyList('filesystems'))
-    list_.add_argument('-H', action='store_true', dest='scriptable_mode')
+        default=PropertyList('filesystems'),
+        help='comma-separated list of types (all, filesystems, snapshots)')
+    list_.add_argument(
+        '-H', action='store_true', dest='scriptable_mode',
+        help='scripted mode (no headers, tab-delimited)')
     list_.add_argument(
         '-o', metavar='property[,property...]', dest='headers',
-        type=PropertyList,
+        type=PropertyList, help='comma-separated list of properties',
         default=PropertyList('name,used,available,refer,mountpoint'))
 
-    promote = subparsers.add_parser('promote')
+    promote = subparsers.add_parser(
+        'promote', help='turn a cloned snapshot into a standalone filesystem')
     promote.add_argument('clone_filesystem')
 
-    receive = subparsers.add_parser('receive')
+    receive = subparsers.add_parser(
+        'receive', help='create a new filesystem from "zzzfs send" output')
     receive.add_argument('filesystem')
 
-    rename = subparsers.add_parser('rename')
+    rename = subparsers.add_parser('rename', help='move or rename a dataset')
     rename.add_argument('identifier', metavar='filesystem|snapshot')
     rename.add_argument('other_identifier', metavar='filesystem|snapshot')
 
-    rollback = subparsers.add_parser('rollback')
+    rollback = subparsers.add_parser(
+        'rollback', help='replace a filesystem with a snapshot')
     rollback.add_argument('snapshot')
 
-    send = subparsers.add_parser('send')
+    send = subparsers.add_parser(
+        'send', help='serialize snapshot into a data stream')
     send.add_argument('snapshot')
 
-    set_ = subparsers.add_parser('set')
+    set_ = subparsers.add_parser(
+        'set', help='set a property value for a dataset')
     set_.add_argument('keyval', metavar='property=value')
-    set_.add_argument(
-        'identifiers', metavar='filesystem|snapshot', nargs='+', default=[])
+    set_.add_argument('identifiers', metavar='filesystem|snapshot', nargs='+')
 
-    snap = subparsers.add_parser('snapshot')
-    snap.add_argument(
-        'snapshots', metavar='filesystem@snapname', nargs='+', default=[])
+    snap = subparsers.add_parser(
+        'snapshot', help='create snapshots of filesystems')
+    snap.add_argument('snapshots', metavar='filesystem@snapname', nargs='+')
 
     # generate dict of argument keys/values
     args = parser.parse_args(argv[1:])

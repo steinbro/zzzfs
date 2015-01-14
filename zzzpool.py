@@ -30,27 +30,34 @@ from libzzzfs.util import PropertyList
 
 
 def zzzpool_main(argv):
-    parser = argparse.ArgumentParser(add_help=False)
+    parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest='command', title='subcommands')
 
     # per-command arguments
-    create = subparsers.add_parser('create')
-    create.add_argument('pool_name', metavar='pool')
-    create.add_argument('disk')
+    create = subparsers.add_parser('create', help='create a pool')
+    create.add_argument('pool_name', metavar='pool', help='pool name')
+    create.add_argument('disk', help='directory in which to create pool')
 
-    destroy = subparsers.add_parser('destroy')
-    destroy.add_argument('pool_name', metavar='pool')
+    destroy = subparsers.add_parser('destroy', help='destroy a pool')
+    destroy.add_argument('pool_name', metavar='pool', help='pool name')
 
-    history = subparsers.add_parser('history')
-    history.add_argument('pool_names', metavar='pool', nargs='*', default=[])
-    history.add_argument('-l', action='store_true', dest='long_format')
+    history = subparsers.add_parser(
+        'history', help='display pool command history')
+    history.add_argument(
+        'pool_names', metavar='pool', nargs='*', default=[], help='pool name')
+    history.add_argument(
+        '-l', action='store_true', dest='long_format',
+        help='show log records in long format')
 
-    list_ = subparsers.add_parser('list')
-    list_.add_argument('pool_name', nargs='?', default=None)
-    list_.add_argument('-H', action='store_true', dest='scriptable_mode')
+    list_ = subparsers.add_parser('list', help='list pools and properties')
+    list_.add_argument('pool_name', nargs='?', default=None, help='pool name')
+    list_.add_argument(
+        '-H', action='store_true', dest='scriptable_mode',
+        help='scripted mode (no headers, tab-delimited)')
     list_.add_argument(
         '-o', metavar='property[,...]', type=PropertyList, dest='headers',
-        default=PropertyList('name,size,alloc,free,cap,health,altroot'))
+        default=PropertyList('name,size,alloc,free,cap,health,altroot'),
+        help='comma-separated list of properties')
 
     # generate dict of argument keys/values
     args = parser.parse_args(argv[1:])
