@@ -51,10 +51,10 @@ def create(filesystem, create_parents):
     return dataset
 
 
-def destroy(filesystem):
+def destroy(filesystem, recursive):
     '''Remove a filesystem.'''
     dataset = get_dataset_by(filesystem, should_be=Filesystem)
-    dataset.destroy()
+    dataset.destroy(recursive)
     return dataset
 
 

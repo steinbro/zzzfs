@@ -46,6 +46,9 @@ def zzzfs_main(argv):
 
     destroy = subparsers.add_parser('destroy', help='destroy a filesystem')
     destroy.add_argument('filesystem')
+    destroy.add_argument(
+        '-r', action='store_true', dest='recursive',
+        help='destroy child filesystems')
 
     diff = subparsers.add_parser(
         'diff', help='compare filesystem/snapshot against a snapshot')

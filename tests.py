@@ -174,9 +174,14 @@ class ZFSTest(ZzzFSTestBase):
         self.assertFalse(
             os.path.exists(os.path.join(self.zroot1, 'foo', 'subfoo')))
 
-        # destroy should remove any child filesystems
+        # destroy should only remove any child filesystems if -r is specified
         self.zzzcmd('zzzfs create -p foo/la/dee/da/subfoo')
-        self.zzzcmd('zzzfs destroy foo/la/dee/da')
+        with self.assertRaises(ZzzFSException):
+            self.zzzcmd('zzzfs destroy foo/la/dee/da')
+        self.assertTrue(
+            get_dataset_by('foo/la/dee/da', should_exist=None).exists())
+
+        self.zzzcmd('zzzfs destroy -r foo/la/dee/da')
         self.assertFalse(
             get_dataset_by('foo/la/dee/da/subfoo', should_exist=None).exists())
         self.assertTrue(

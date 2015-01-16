@@ -345,16 +345,27 @@ class Filesystem(Dataset):
         #    'after creating %s, filesystems in %s: %s', self, self.pool,
         #    self.pool.get_filesystems())
 
-    def destroy(self):
+    def destroy(self, recursive=False):
+        dependencies = [
+            f for f in self.pool.get_filesystems()
+            if f.name.startswith(self.name) and f.name != self.name]
+        #logger.debug('%s dependencies: %s', self, dependencies)
+
+        if not recursive:
+            if len(dependencies) > 0:
+                raise ZzzFSException, (
+                    'cannot destroy %r: filesystem has children\n'
+                    'use \'-r\' to destroy the following datasets\n'
+                    '%s' % (self.name, '\n'.join(f.name for f in dependencies)))
+
         # user may have already deleted data
         if os.path.exists(self.mountpoint):
             shutil.rmtree(self.mountpoint)
         shutil.rmtree(self.root)
 
         # delete any child filesystems
-        for f in self.pool.get_filesystems():
-            if f.name.startswith(self.name):
-                f.destroy()
+        for f in dependencies:
+            f.destroy(recursive)
 
     def rollback_to(self, snapshot):
         shutil.rmtree(self.mountpoint)
