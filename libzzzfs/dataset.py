@@ -348,15 +348,14 @@ class Filesystem(Dataset):
     def destroy(self, recursive=False):
         dependencies = [
             f for f in self.pool.get_filesystems()
-            if f.name.startswith(self.name) and f.name != self.name]
+            if f.name.startswith(self.name + '/')]
         #logger.debug('%s dependencies: %s', self, dependencies)
 
-        if not recursive:
-            if len(dependencies) > 0:
-                raise ZzzFSException, (
-                    'cannot destroy %r: filesystem has children\n'
-                    'use \'-r\' to destroy the following datasets\n'
-                    '%s' % (self.name, '\n'.join(f.name for f in dependencies)))
+        if len(dependencies) > 0 and not recursive:
+            raise ZzzFSException, (
+                'cannot destroy %r: filesystem has children\n'
+                'use \'-r\' to destroy the following datasets:\n'
+                '%s' % (self.name, '\n'.join(f.name for f in dependencies)))
 
         # user may have already deleted data
         if os.path.exists(self.mountpoint):

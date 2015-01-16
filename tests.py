@@ -187,6 +187,10 @@ class ZFSTest(ZzzFSTestBase):
         self.assertTrue(
             get_dataset_by('foo/la/dee', should_exist=None).exists())
 
+        # don't mistake matching prefix as parent filesystem
+        self.zzzcmd('zzzfs create foo/la/deeee')
+        self.zzzcmd('zzzfs destroy foo/la/dee')  # should not require -r
+
     def test_zfs_get_set(self):
         # local vs.inherited properties
         self.zzzcmd('zzzfs create foo/subfoo')
