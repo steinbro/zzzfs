@@ -81,7 +81,7 @@ class PropertyList(object):
                 yield str
 
 
-def tabulated(data, headers, scriptable_mode=False):
+def tabulated(data, headers, scriptable_mode=False, sort_asc=[], sort_desc=[]):
     '''Generates a printable table as a string given data (an array of dicts)
     and an array of field names for headers.
     '''
@@ -104,6 +104,17 @@ def tabulated(data, headers, scriptable_mode=False):
                 box_width *= -1  # negative field width means left-align
             cells.append('%%%ds' % box_width)
         row_format = '\t'.join(cells)
+
+    # sort by specified fields, if any
+    for field in sort_asc + sort_desc:
+        if field not in names:
+            raise ZzzFSException, '%s: no such column' % field
+
+    for field in sort_asc:
+        data = sorted(data, key=lambda row: row[field])
+
+    for field in sort_desc:
+        data = list(reversed(sorted(data, key=lambda row: row[field])))
 
     # Add individual data rows.
     output = '\n'.join(

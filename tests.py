@@ -281,6 +281,32 @@ class ZFSTest(ZzzFSTestBase):
             'foo/la/dee/da@first',
             self.zzzcmd('zzzfs list -H -t snap -o name -r foo/la/dee'))
 
+    def test_zfs_list_sort(self):
+        self.assertEqual(
+            ['bar', 'foo'],
+            self.zzzcmd('zzzfs list -H -o name -s name').split('\n'))
+
+        # descending sort
+        self.assertEqual(
+            ['foo', 'bar'],
+            self.zzzcmd('zzzfs list -H -o name -S name').split('\n'))
+
+        # sort by any field
+        self.zzzcmd('zzzfs set myprop=1 foo')
+        self.zzzcmd('zzzfs set myprop=2 bar')
+        self.assertEqual(
+            ['1', '2'],
+            self.zzzcmd('zzzfs list -H -o myprop -s myprop').split('\n'))
+
+        # multiple sort columns: applied left to right
+        self.assertEqual(
+            'bar\t2\nfoo\t1',
+            self.zzzcmd('zzzfs list -H -o name,myprop -s myprop -s name'))
+
+        # can't sort by a filed not shown
+        with self.assertRaises(ZzzFSException):
+            self.zzzcmd('zzzfs list -H -o name -s myprop')
+
     def test_zfs_snapshot(self):
         self.populate_randomly(os.path.join(self.zroot1, 'foo'))
         self.zzzcmd('zzzfs snapshot foo@first')

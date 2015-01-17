@@ -109,6 +109,12 @@ def zzzfs_main(argv):
         '-t', metavar='type[,type...]', dest='types', type=PropertyList,
         default=PropertyList('filesystems'),
         help='comma-separated list of types (all, filesystems, snapshots)')
+    list_.add_argument(
+        '-s', metavar='property', dest='sort_asc', action='append', default=[],
+        help='sort by property (ascending)')
+    list_.add_argument(
+        '-S', metavar='property', dest='sort_desc', action='append', default=[],
+        help='sort by property (descending)')
     list_.add_argument('identifiers', metavar='filesystem|snapshot', nargs='*')
 
     promote = subparsers.add_parser(

@@ -137,13 +137,14 @@ def inherit(property, identifiers):
     return datasets
 
 
-def list(identifiers, types, scriptable_mode, headers, recursive, max_depth):
+def list(identifiers, types, scriptable_mode, headers, recursive, max_depth,
+         sort_asc, sort_desc):
     '''Tabulate a set of properties for a set of datasets.'''
     records = []
     for d in get_all_datasets(identifiers, types, recursive, max_depth):
         records.append(dict((h, d.get_property(h)) for h in headers.names))
 
-    return tabulated(records, headers, scriptable_mode)
+    return tabulated(records, headers, scriptable_mode, sort_asc, sort_desc)
 
 
 def promote(clone_filesystem):
