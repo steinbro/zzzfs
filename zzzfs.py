@@ -56,6 +56,13 @@ def zzzfs_main(argv):
     diff.add_argument('other_identifier', metavar='snapshot|filesystem')
 
     get = subparsers.add_parser('get', help='get dataset properties')
+    recursive_or_depth = get.add_mutually_exclusive_group()
+    recursive_or_depth.add_argument(
+        '-r', action='store_true', dest='recursive',
+        help='display all children')
+    recursive_or_depth.add_argument(
+        '-d', metavar='depth', type=int, dest='max_depth', default=0,
+        help='number of child generations to display')
     get.add_argument(
         'properties', metavar='all | property[,property...]', type=PropertyList,
         help='comma-separated list of properties')
@@ -69,6 +76,10 @@ def zzzfs_main(argv):
         default=PropertyList('all'), dest='headers',
         help='comma-separated list of fields (name, property, value, source)')
     get.add_argument(
+        '-t', metavar='type[,type...]', dest='types', type=PropertyList,
+        default=PropertyList('filesystems'),
+        help='comma-separated list of types (all, filesystems, snapshots)')
+    get.add_argument(
         '-s', metavar='source[,source...]', type=PropertyList, dest='sources',
         default=PropertyList('local,inherited'),
         help='comma-separated list of sources (local, inherited)')
@@ -80,10 +91,13 @@ def zzzfs_main(argv):
         'identifiers', metavar='filesystem|snapshot', nargs='+')
 
     list_ = subparsers.add_parser('list', help='list datasets')
-    list_.add_argument(
-        '-t', metavar='type[,type...]', dest='types', type=PropertyList,
-        default=PropertyList('filesystems'),
-        help='comma-separated list of types (all, filesystems, snapshots)')
+    recursive_or_depth = list_.add_mutually_exclusive_group()
+    recursive_or_depth.add_argument(
+        '-r', action='store_true', dest='recursive',
+        help='display all children')
+    recursive_or_depth.add_argument(
+        '-d', metavar='depth', type=int, dest='max_depth', default=0,
+        help='number of child generations to display')
     list_.add_argument(
         '-H', action='store_true', dest='scriptable_mode',
         help='scripted mode (no headers, tab-delimited)')
@@ -91,6 +105,11 @@ def zzzfs_main(argv):
         '-o', metavar='property[,property...]', dest='headers',
         type=PropertyList, help='comma-separated list of properties',
         default=PropertyList('name,used,available,refer,mountpoint'))
+    list_.add_argument(
+        '-t', metavar='type[,type...]', dest='types', type=PropertyList,
+        default=PropertyList('filesystems'),
+        help='comma-separated list of types (all, filesystems, snapshots)')
+    list_.add_argument('identifiers', metavar='filesystem|snapshot', nargs='*')
 
     promote = subparsers.add_parser(
         'promote', help='turn a cloned snapshot into a standalone filesystem')

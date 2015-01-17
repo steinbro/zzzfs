@@ -26,7 +26,7 @@ import sys
 import shutil
 import filecmp
 
-from dataset import get_dataset_by, Filesystem, Pool, Snapshot
+from dataset import get_all_datasets, get_dataset_by, Filesystem, Pool, Snapshot
 from util import tabulated, validate_component_name, ZzzFSException
 
 
@@ -87,7 +87,8 @@ def diff(identifier, other_identifier):
     return '\n'.join(output)
 
 
-def get(properties, identifiers, headers, sources, scriptable_mode):
+def get(properties, identifiers, headers, sources, scriptable_mode, recursive,
+        max_depth, types):
     '''Get a set of properties for a set of datasets.'''
     all_headers = ['name', 'property', 'value', 'source']
     if headers.items == ['all']:
@@ -95,9 +96,8 @@ def get(properties, identifiers, headers, sources, scriptable_mode):
     headers.validate_against(all_headers)
     sources.validate_against(['local', 'inherited'])
 
-    datasets = [get_dataset_by(identifier) for identifier in identifiers]
     attrs = []
-    for dataset in datasets:
+    for dataset in get_all_datasets(identifiers, types, recursive, max_depth):
         if properties.items == ['all']:
             if 'local' in sources.items:
                 for key, val in dataset.get_local_properties().iteritems():
@@ -137,20 +137,10 @@ def inherit(property, identifiers):
     return datasets
 
 
-def list(types, scriptable_mode, headers):
+def list(identifiers, types, scriptable_mode, headers, recursive, max_depth):
     '''Tabulate a set of properties for a set of datasets.'''
-    types.validate_against(['all', 'filesystems', 'snapshots', 'snap'])
-
-    filesystems = [f for p in Pool.all() for f in p.get_filesystems()]
-    datasets = []
     records = []
-    if any(t in ('all', 'filesystems') for t in types.items):
-        datasets = filesystems
-
-    if any(t in ('all', 'snapshots', 'snap') for t in types.items):
-        datasets += [s for f in filesystems for s in f.get_snapshots()]
-
-    for d in datasets:
+    for d in get_all_datasets(identifiers, types, recursive, max_depth):
         records.append(dict((h, d.get_property(h)) for h in headers.names))
 
     return tabulated(records, headers, scriptable_mode)

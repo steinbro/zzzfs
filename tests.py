@@ -174,6 +174,7 @@ class ZFSTest(ZzzFSTestBase):
         self.assertFalse(
             os.path.exists(os.path.join(self.zroot1, 'foo', 'subfoo')))
 
+    def test_zfs_destory_recursive(self):
         # destroy should only remove any child filesystems if -r is specified
         self.zzzcmd('zzzfs create -p foo/la/dee/da/subfoo')
         with self.assertRaises(ZzzFSException):
@@ -252,6 +253,34 @@ class ZFSTest(ZzzFSTestBase):
         # custom field names shouldn't throw an exception
         self.zzzcmd('zzzfs list -o no,such,headers')
 
+    def test_zfs_list_descendants(self):
+        self.zzzcmd('zzzfs create -p foo/la/dee/da/subfoo')
+
+        # without -r or -d, show only the dataset itself
+        self.assertEqual(
+            'foo/la/dee', self.zzzcmd('zzzfs list -H -o name foo/la/dee'))
+
+        # or multiple, if so specified
+        self.assertEqual(
+            ['foo/la', 'foo/la/dee'],
+            self.zzzcmd('zzzfs list -H -o name foo/la foo/la/dee').split('\n'))
+
+        # -r shows all descendants
+        self.assertEqual(
+            ['foo/la/dee', 'foo/la/dee/da', 'foo/la/dee/da/subfoo'],
+            self.zzzcmd('zzzfs list -H -o name -r foo/la/dee').split('\n'))
+
+        # -d shows a specific number of generations
+        self.assertEqual(
+            ['foo/la/dee', 'foo/la/dee/da'],
+            self.zzzcmd('zzzfs list -H -o name -d 1 foo/la/dee').split('\n'))
+
+        # snapshots of descendants should also be shown
+        self.zzzcmd('zzzfs snapshot foo/la/dee/da@first')
+        self.assertEqual(
+            'foo/la/dee/da@first',
+            self.zzzcmd('zzzfs list -H -t snap -o name -r foo/la/dee'))
+
     def test_zfs_snapshot(self):
         self.populate_randomly(os.path.join(self.zroot1, 'foo'))
         self.zzzcmd('zzzfs snapshot foo@first')
@@ -323,7 +352,7 @@ class ZFSTest(ZzzFSTestBase):
         self.assertTrue(
             self.zzzcmd('zzzfs diff foo@first foo').startswith('-\t'))
 
-    def test_zfs_rename(self):
+    def test_zfs_rename_filesystem(self):
         something_path = os.path.join(self.zroot1, 'foo', 'something')
         subfoo_path = os.path.join(self.zroot1, 'foo', 'subfoo')
         self.zzzcmd('zzzfs create foo/something')
@@ -341,22 +370,22 @@ class ZFSTest(ZzzFSTestBase):
         # files should have been preserved
         self.assertEqual(contents_before, self.all_files_in(subfoo_path))
 
+    def test_zfs_rename_snapshot(self):
+        self.zzzcmd('zzzfs snapshot foo@first')
+        self.zzzcmd('zzzfs rename foo@first foo@second')
+
+        self.assertNotIn('foo@first', self.zzzcmd('zzzfs list -t snapshots'))
+        self.assertIn('foo@second', self.zzzcmd('zzzfs list -t snapshots'))
+
+        self.zzzcmd('zzzfs snapshot foo@third')
+        self.zzzcmd('zzzfs rename foo@third fourth')
+
+        self.assertNotIn('foo@third', self.zzzcmd('zzzfs list -t snapshots'))
+        self.assertIn('foo@fourth', self.zzzcmd('zzzfs list -t snapshots'))
+
+        # try to rename to different parent filesystem
+        self.zzzcmd('zzzfs create foo/subfoo')
         self.zzzcmd('zzzfs snapshot foo/subfoo@first')
-        self.zzzcmd('zzzfs rename foo/subfoo@first foo/subfoo@second')
-
-        self.assertNotIn(
-            'foo/subfoo@first', self.zzzcmd('zzzfs list -t snapshots'))
-        self.assertIn(
-            'foo/subfoo@second', self.zzzcmd('zzzfs list -t snapshots'))
-
-        self.zzzcmd('zzzfs snapshot foo/subfoo@third')
-        self.zzzcmd('zzzfs rename foo/subfoo@third fourth')
-
-        self.assertNotIn(
-            'foo/subfoo@third', self.zzzcmd('zzzfs list -t snapshots'))
-        self.assertIn(
-            'foo/subfoo@fourth', self.zzzcmd('zzzfs list -t snapshots'))
-
         with self.assertRaises(ZzzFSException):
             self.zzzcmd('zzzfs rename foo/subfoo@first foo@first')
 

@@ -105,6 +105,45 @@ def get_dataset_by(dataset_name, should_be=None, should_exist=True):
     return obj
 
 
+def get_all_datasets(identifiers, types, recursive, max_depth):
+    '''Get all datasets matching the given identifier names and dataset types,
+    and optionally all or a generational subset of their descendants.
+    '''
+    types.validate_against(['all', 'filesystems', 'snapshots', 'snap'])
+
+    # start with set of all filesystems and snapshots
+    filesystems = [f for p in Pool.all() for f in p.get_filesystems()]
+    snapshots = [s for f in filesystems for s in f.get_snapshots()]
+    datasets = filesystems + snapshots
+
+    # filter to specific identifiers if requested
+    if identifiers:
+        datasets = [get_dataset_by(i) for i in identifiers]
+
+        # add children of specified identifiers, if requested
+        if recursive or max_depth:
+            children = []
+            for d in datasets:
+                if isinstance(d, Filesystem):
+                    children += d.get_children(max_depth)
+            datasets += children
+
+        # add any snapshots of identifiers and their descendants
+        for d in datasets:
+            if isinstance(d, Filesystem):
+                datasets += d.get_snapshots()
+
+    # filter out filesystems, if not requested
+    if not any(t in ('all', 'filesystems') for t in types.items):
+        datasets = [d for d in datasets if not isinstance(d, Filesystem)]
+
+    # filter out snapshots, if not requested
+    if not any(t in ('all', 'snapshots', 'snap') for t in types.items):
+        datasets = [d for d in datasets if not isinstance(d, Snapshot)]
+
+    return datasets
+
+
 class Dataset(object):
     '''Base class for Pool, Filesystem, and Snapshot. Contains methods that
     apply to all three objects.
@@ -298,6 +337,22 @@ class Filesystem(Dataset):
     def exists(self):
         return os.path.exists(self.root)
 
+    def get_children(self, max_depth=0):  # 0 = all descendants
+        children = [
+            f for f in self.pool.get_filesystems()
+            if f.name.startswith(self.name + '/')]
+        #logger.debug('%s children: %s', self, children)
+
+        if max_depth > 0:
+            # use number of slashes to count depth
+            depth = max_depth + self.name.count('/')
+            children = [f for f in children if f.name.count('/') <= depth]
+
+        return children
+
+    def get_snapshots(self):
+        return [Snapshot(self.name, x) for x in os.listdir(self.snapshots)]
+
     def create(self, create_parents=False, from_stream=None):
         if not self.get_parent().exists():
             if create_parents:
@@ -397,9 +452,6 @@ class Filesystem(Dataset):
 
         # all data has been moved
         self.destroy()
-
-    def get_snapshots(self):
-        return [Snapshot(self.name, x) for x in os.listdir(self.snapshots)]
 
 
 class Snapshot(Dataset):
