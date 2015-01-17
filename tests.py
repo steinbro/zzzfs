@@ -261,19 +261,19 @@ class ZFSTest(ZzzFSTestBase):
             'foo/la/dee', self.zzzcmd('zzzfs list -H -o name foo/la/dee'))
 
         # or multiple, if so specified
-        self.assertEqual(
-            ['foo/la', 'foo/la/dee'],
-            self.zzzcmd('zzzfs list -H -o name foo/la foo/la/dee').split('\n'))
+        self.assertSetEqual(
+            set(['foo/la', 'foo/la/dee']), set(self.zzzcmd(
+                'zzzfs list -H -o name foo/la foo/la/dee').split('\n')))
 
         # -r shows all descendants
-        self.assertEqual(
-            ['foo/la/dee', 'foo/la/dee/da', 'foo/la/dee/da/subfoo'],
-            self.zzzcmd('zzzfs list -H -o name -r foo/la/dee').split('\n'))
+        self.assertSetEqual(
+            set(['foo/la/dee', 'foo/la/dee/da', 'foo/la/dee/da/subfoo']),
+            set(self.zzzcmd('zzzfs list -H -o name -r foo/la/dee').split('\n')))
 
         # -d shows a specific number of generations
-        self.assertEqual(
-            ['foo/la/dee', 'foo/la/dee/da'],
-            self.zzzcmd('zzzfs list -H -o name -d 1 foo/la/dee').split('\n'))
+        self.assertSetEqual(
+            set(['foo/la/dee', 'foo/la/dee/da']), set(self.zzzcmd(
+                'zzzfs list -H -o name -d 1 foo/la/dee').split('\n')))
 
         # snapshots of descendants should also be shown
         self.zzzcmd('zzzfs snapshot foo/la/dee/da@first')
