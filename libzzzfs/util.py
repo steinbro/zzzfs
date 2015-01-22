@@ -63,7 +63,7 @@ class PropertyList(object):
         # compare against a set of acceptable fields
         for col in self.names:
             if col not in acceptable:
-                raise ZzzFSException, '%s: unrecognized property name' % col
+                raise ZzzFSException('%s: unrecognized property name' % col)
 
     @property
     def names(self):
@@ -108,7 +108,7 @@ def tabulated(data, headers, scriptable_mode=False, sort_asc=[], sort_desc=[]):
     # sort by specified fields, if any
     for field in sort_asc + sort_desc:
         if field not in names:
-            raise ZzzFSException, '%s: no such column' % field
+            raise ZzzFSException('%s: no such column' % field)
 
     for field in sort_asc:
         data = sorted(data, key=lambda row: row[field])

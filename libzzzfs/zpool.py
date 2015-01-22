@@ -21,8 +21,8 @@
 
 # Copyright (c) 2015 Daniel W. Steinbrook. All rights reserved.
 
-from dataset import Pool
-from util import tabulated, ZzzFSException
+from libzzzfs.dataset import Pool
+from libzzzfs.util import tabulated, ZzzFSException
 
 
 def create(pool_name, disk):

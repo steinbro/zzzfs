@@ -21,12 +21,12 @@
 
 # Copyright (c) 2015 Daniel W. Steinbrook. All rights reserved.
 
+import io
 import os
 import shutil
 import random
 import tempfile
 import unittest
-import cStringIO
 
 from libzzzfs import zfs
 from libzzzfs.dataset import get_dataset_by
@@ -282,6 +282,7 @@ class ZFSTest(ZzzFSTestBase):
             self.zzzcmd('zzzfs list -H -t snap -o name -r foo/la/dee'))
 
     def test_zfs_list_sort(self):
+        # not using assertSetEquals here because order matters, obviously
         self.assertEqual(
             ['bar', 'foo'],
             self.zzzcmd('zzzfs list -H -o name -s name').split('\n'))
@@ -303,7 +304,7 @@ class ZFSTest(ZzzFSTestBase):
             'bar\t2\nfoo\t1',
             self.zzzcmd('zzzfs list -H -o name,myprop -s myprop -s name'))
 
-        # can't sort by a filed not shown
+        # can't sort by a field not shown
         with self.assertRaises(ZzzFSException):
             self.zzzcmd('zzzfs list -H -o name -s myprop')
 
@@ -352,7 +353,7 @@ class ZFSTest(ZzzFSTestBase):
         self.zzzcmd('zzzfs snapshot foo/origin@first')
 
         # use file-like object to simulate pipe
-        buf = cStringIO.StringIO()
+        buf = io.BytesIO()
         zfs.send('foo/origin@first', stream=buf)
         buf.seek(0)
         zfs.receive('foo/received', stream=buf)
@@ -364,7 +365,7 @@ class ZFSTest(ZzzFSTestBase):
 
         # receiving a bad stream
         with self.assertRaises(ZzzFSException):
-            zfs.receive('foo/newer', stream=cStringIO.StringIO('not snapshot'))
+            zfs.receive('foo/newer', stream=io.StringIO(u'not snapshot'))
 
         # if receive failed, filesystem should not have been created
         self.assertNotIn('foo/newer', self.zzzcmd('zzzfs list'))

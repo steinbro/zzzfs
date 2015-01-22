@@ -26,8 +26,9 @@ import sys
 import shutil
 import filecmp
 
-from dataset import get_all_datasets, get_dataset_by, Filesystem, Pool, Snapshot
-from util import tabulated, validate_component_name, ZzzFSException
+from libzzzfs.dataset import (
+    get_all_datasets, get_dataset_by, Filesystem, Pool, Snapshot)
+from libzzzfs.util import tabulated, validate_component_name, ZzzFSException
 
 
 # Each method returns a string to be written to stdout, or a dataset (or list
@@ -67,7 +68,7 @@ def diff(identifier, other_identifier):
     # real ZFS can't diff snapshots in different filesystem; not so in ZzzFS
     #if isinstance(dataset2, Filesystem) and (
     #        dataset1.filesystem.name != dataset2.filesystem.name):
-    #    raise ZzzFSException, (
+    #    raise ZzzFSException(
     #        '%s: cannot compare to a different filesystem' % identifier)
 
     output = []
@@ -100,13 +101,13 @@ def get(properties, identifiers, headers, sources, scriptable_mode, recursive,
     for dataset in get_all_datasets(identifiers, types, recursive, max_depth):
         if properties.items == ['all']:
             if 'local' in sources.items:
-                for key, val in dataset.get_local_properties().iteritems():
+                for key, val in dataset.get_local_properties().items():
                     attrs.append({
                         'name': dataset.name, 'property': key, 'value': val,
                         'source': 'local'})
 
             if 'inherited' in sources.items:
-                for key, val in dataset.get_inherited_properties().iteritems():
+                for key, val in dataset.get_inherited_properties().items():
                     attrs.append({
                         'name': dataset.name, 'property': key, 'value': val,
                         'source': 'inherited'})
@@ -125,7 +126,7 @@ def get(properties, identifiers, headers, sources, scriptable_mode, recursive,
 def inherit(property, identifiers):
     '''Remove a local property from a set of datasets.'''
     if not validate_component_name(property):
-        raise ZzzFSException, '%s: invalid property' % property
+        raise ZzzFSException('%s: invalid property' % property)
 
     datasets = [get_dataset_by(identifier) for identifier in identifiers]
     for dataset in datasets:
@@ -183,14 +184,14 @@ def rename(identifier, other_identifier):
 
         # both snapshots
         if dataset1.filesystem.name != dataset2.filesystem.name:
-            raise ZzzFSException, 'mismatched filesystems'
+            raise ZzzFSException('mismatched filesystems')
 
     else:  # dataset1 is a filesystem
         dataset2 = get_dataset_by(
             other_identifier, should_be=Filesystem, should_exist=False)
 
         if dataset1.pool.name != dataset2.pool.name:
-            raise ZzzFSException, 'cannot rename to different pool'
+            raise ZzzFSException('cannot rename to different pool')
 
     # same procedure whether filesystem or snapshot
     dataset1.rename(dataset2)
@@ -216,10 +217,10 @@ def set(keyval, identifiers):
     try:
         key, val = keyval.split('=')
     except ValueError:
-        raise ZzzFSException, '%r: invalid property=value format' % keyval
+        raise ZzzFSException('%r: invalid property=value format' % keyval)
 
     if not validate_component_name(key):
-        raise ZzzFSException, '%s: invalid property' % key
+        raise ZzzFSException('%s: invalid property' % key)
 
     datasets = [get_dataset_by(identifier) for identifier in identifiers]
     for dataset in datasets:
@@ -232,7 +233,7 @@ def snapshot(snapshots):
     for i in snapshots:
         dataset = get_dataset_by(i, should_be=Snapshot, should_exist=False)
         if not dataset.filesystem.exists():
-            raise ZzzFSException, (
+            raise ZzzFSException(
                 '%s: no such filesystem' % dataset.filesystem.name)
         dataset.create()
         yield dataset

@@ -44,6 +44,7 @@
 #         [...]
 #     [...]
 
+import io
 import os
 import csv
 import pwd
@@ -53,9 +54,8 @@ import logging
 import tarfile
 import datetime
 import platform
-import cStringIO
 
-from util import validate_component_name, ZzzFSException
+from libzzzfs.util import validate_component_name, ZzzFSException
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -78,29 +78,29 @@ def get_dataset_by(dataset_name, should_be=None, should_exist=True):
         filesystem_name, snapshot_name = dataset_name.split('@', 1)
 
     if not validate_component_name(filesystem_name, allow_slashes=True):
-        raise ZzzFSException, '%s: invalid dataset identifier' % dataset_name
+        raise ZzzFSException('%s: invalid dataset identifier' % dataset_name)
 
     obj = Filesystem(dataset_name)
     if snapshot_name:
         if not validate_component_name(snapshot_name):
-            raise ZzzFSException, '%s: invalid snapshot name' % snapshot_name
+            raise ZzzFSException('%s: invalid snapshot name' % snapshot_name)
 
         obj = Snapshot(filesystem_name, snapshot_name)
 
     if should_be:
         if not isinstance(obj, should_be):
-            raise ZzzFSException, '%s: not a %s' % (
-                dataset_name, should_be.__name__.lower())
+            raise ZzzFSException(
+                '%s: not a %s' % (dataset_name, should_be.__name__.lower()))
 
     if should_exist and not obj.exists():
-        raise ZzzFSException, '%s: no such dataset' % dataset_name
+        raise ZzzFSException('%s: no such dataset' % dataset_name)
     if obj.exists() and should_exist == False:
-        raise ZzzFSException, '%s: dataset exists' % dataset_name
+        raise ZzzFSException('%s: dataset exists' % dataset_name)
 
     # pool should exist, even if dataset itself shouldn't
     #logger.debug('%s, in pool %s', obj, obj.pool)
     if not obj.pool.exists():
-        raise ZzzFSException, '%s: no such pool' % obj.pool.name
+        raise ZzzFSException('%s: no such pool' % obj.pool.name)
 
     return obj
 
@@ -129,6 +129,8 @@ def get_all_datasets(identifiers, types, recursive, max_depth):
             datasets += children
 
         # add any snapshots of identifiers and their descendants
+        # it's safe to modify the list as we iterate, because we're only adding
+        # snapshots, not filesystems
         for d in datasets:
             if isinstance(d, Filesystem):
                 datasets += d.get_snapshots()
@@ -189,7 +191,7 @@ class Dataset(object):
         parent = self
         while parent.get_parent():
             parent = parent.get_parent()
-            for key, val in parent.get_local_properties().iteritems():
+            for key, val in parent.get_local_properties().items():
                 if key not in attrs and key not in local_attrs:
                     attrs[key] = val
 
@@ -199,7 +201,7 @@ class Dataset(object):
         if not os.path.exists(self.properties):
             os.makedirs(self.properties)
         if '/' in key:
-            raise ZzzFSException, '%s: invalid property' % key
+            raise ZzzFSException('%s: invalid property' % key)
         with open(os.path.join(self.properties, key), 'w') as f:
             f.write(val)
 
@@ -233,9 +235,9 @@ class Pool(Dataset):
         self.history = os.path.join(self.root, 'history')
 
         if should_exist and not self.exists():
-            raise ZzzFSException, '%s: no such pool' % self.name
+            raise ZzzFSException('%s: no such pool' % self.name)
         if should_exist == False and self.exists():
-            raise ZzzFSException, '%s: pool exists' % self.name
+            raise ZzzFSException('%s: pool exists' % self.name)
 
     def get_parent(self):
         # pool is the top-most desendent of any dataset
@@ -257,7 +259,7 @@ class Pool(Dataset):
 
     def create(self, disk):
         if os.path.exists(disk) and len(os.listdir(disk)) != 0:
-            raise ZzzFSException, '%s: disk in use' % self.name
+            raise ZzzFSException('%s: disk in use' % self.name)
 
         os.makedirs(self.root)
         pool_target = os.path.join(os.path.abspath(disk), self.name)
@@ -279,7 +281,7 @@ class Pool(Dataset):
 
     def get_history(self, long_format=False):
         try:
-            with open(self.history, 'rb') as f:
+            with open(self.history, 'r') as f:
                 history = csv.reader(f)
                 for (date, command, user, host) in history:
                     if long_format:
@@ -359,7 +361,7 @@ class Filesystem(Dataset):
                 #logger.debug('%s: need to create %s', self, self.get_parent())
                 self.get_parent().create(create_parents=True)
             else:
-                raise ZzzFSException, (
+                raise ZzzFSException(
                     '%s: parent filesystem missing' % self.name)
 
         # create relative symlink into pool data
@@ -379,7 +381,7 @@ class Filesystem(Dataset):
             try:
                 # gzip needs a seekable object, not a stream
                 #XXX this entails fitting the entire snapshot itno memeory
-                buf = cStringIO.StringIO(from_stream.read())
+                buf = io.BytesIO(from_stream.read())
                 buf.seek(0)
                 with gzip.GzipFile(fileobj=buf) as g:
                     with tarfile.TarFile(fileobj=g) as t:
@@ -391,10 +393,10 @@ class Filesystem(Dataset):
                         self.rollback_to(
                             Snapshot(self.name, os.listdir(self.snapshots)[0]))
 
-            except Exception, e:
+            except Exception as e:
                 # if anything goes wrong, destroy target filesystem and exit
                 self.destroy()
-                raise ZzzFSException, e
+                raise ZzzFSException(e)
 
         #logger.debug(
         #    'after creating %s, filesystems in %s: %s', self, self.pool,
@@ -407,7 +409,7 @@ class Filesystem(Dataset):
         #logger.debug('%s dependencies: %s', self, dependencies)
 
         if len(dependencies) > 0 and not recursive:
-            raise ZzzFSException, (
+            raise ZzzFSException(
                 'cannot destroy %r: filesystem has children\n'
                 'use \'-r\' to destroy the following datasets:\n'
                 '%s' % (self.name, '\n'.join(f.name for f in dependencies)))

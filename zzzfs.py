@@ -169,8 +169,8 @@ def zzzfs_main(argv):
 if __name__ == '__main__':
     try:
         output = zzzfs_main(sys.argv)
-    except ZzzFSException, e:
+    except ZzzFSException as e:
         sys.exit('%s: %s' % (sys.argv[0], e))
 
     if output:
-        print output
+        print(output)
