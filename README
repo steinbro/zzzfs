@@ -4,9 +4,9 @@ ZzzFS: dataset management à la ZFS
 ZzzFS ("snooze FS") brings a set of ZFS management commands to non-ZFS volumes,
 turning any directory on a traditional filesystem into a zpool-like object.
 Using only the Python standard library, ZzzFS can be useful to, for example,
-test tools that use ZFS functionality on a system lacking real ZFS. Of course,
-ZzzFS misses all of the low-level features underpinning true ZFS volumes:
-checksumming, copy-on-write, etc.
+test tools that use ZFS functionality on a system lacking real ZFS -- even
+Windows. Of course, ZzzFS misses all of the low-level features underpinning
+true ZFS volumes: checksumming, copy-on-write, etc.
 
 
 Note that this is distinct from the ZFS feature allowing a zpool to be created

@@ -60,7 +60,7 @@ from libzzzfs.util import validate_component_name, ZzzFSException
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-ZZZFS_DEFAULT_ROOT = os.path.expanduser('~/.zzzfs')
+ZZZFS_DEFAULT_ROOT = os.path.expanduser(os.path.join('~', '.zzzfs'))
 
 
 def get_dataset_by(dataset_name, should_be=None, should_exist=True):
@@ -150,6 +150,8 @@ class Dataset(object):
     '''Base class for Pool, Filesystem, and Snapshot. Contains methods that
     apply to all three objects.
     '''
+    PATH_ESCAPE_CHAR = '%'
+
     def __repr__(self):
         return '<%s: %s>' % (self.__class__.__name__, self.name)
 
@@ -166,8 +168,8 @@ class Dataset(object):
         return {'name': self.name}
 
     def get_parent(self):
-        if '/' in self.name:
-            return Filesystem(self.name.rsplit('/', 1)[-2])
+        if os.path.sep in self.name:
+            return Filesystem(self.name.rsplit(os.path.sep, 1)[-2])
         return Pool(self.name)
 
     def get_local_properties(self):
@@ -200,7 +202,7 @@ class Dataset(object):
     def add_local_property(self, key, val):
         if not os.path.exists(self.properties):
             os.makedirs(self.properties)
-        if '/' in key:
+        if os.path.sep in key:
             raise ZzzFSException('%s: invalid property' % key)
         with open(os.path.join(self.properties, key), 'w') as f:
             f.write(val)
@@ -276,7 +278,7 @@ class Pool(Dataset):
 
     def get_filesystems(self):
         # unescape slashes when instantiating Filesystem object
-        return [Filesystem(x.replace('%', '/'))
+        return [Filesystem(x.replace(self.PATH_ESCAPE_CHAR, os.path.sep))
             for x in os.listdir(self.filesystems)]
 
     def get_history(self, long_format=False):
@@ -312,7 +314,7 @@ class Filesystem(Dataset):
     def __init__(self, filesystem):
         # need to escape slashes to use filesystem name as file name
         self.name = filesystem
-        self.safe_name = self.name.replace('/', '%')
+        self.safe_name = self.name.replace(os.path.sep, self.PATH_ESCAPE_CHAR)
 
         # get pool name by walking up tree
         obj = self
@@ -342,13 +344,14 @@ class Filesystem(Dataset):
     def get_children(self, max_depth=0):  # 0 = all descendants
         children = [
             f for f in self.pool.get_filesystems()
-            if f.name.startswith(self.name + '/')]
+            if f.name.startswith(self.name + os.path.sep)]
         #logger.debug('%s children: %s', self, children)
 
         if max_depth > 0:
             # use number of slashes to count depth
-            depth = max_depth + self.name.count('/')
-            children = [f for f in children if f.name.count('/') <= depth]
+            depth = max_depth + self.name.count(os.path.sep)
+            children = [
+                f for f in children if f.name.count(os.path.sep) <= depth]
 
         return children
 
@@ -405,7 +408,7 @@ class Filesystem(Dataset):
     def destroy(self, recursive=False):
         dependencies = [
             f for f in self.pool.get_filesystems()
-            if f.name.startswith(self.name + '/')]
+            if f.name.startswith(self.name + os.path.sep)]
         #logger.debug('%s dependencies: %s', self, dependencies)
 
         if len(dependencies) > 0 and not recursive:

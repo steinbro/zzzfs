@@ -68,8 +68,8 @@ class ZzzFSTestBase(unittest.TestCase):
         file.
         '''
         for n in range(random.randint(1, max_subdirs)):
-            subdir = '/'.join(
-                '%d' % n for i in range(random.randint(1, max_depth)))
+            subdir = os.path.join(
+                *('%d' % n for i in range(random.randint(1, max_depth))))
             path = os.path.join(directory, subdir)
             filename = os.path.join(path, 'somefile')
             os.makedirs(path)
@@ -83,9 +83,10 @@ class ZzzFSTestBase(unittest.TestCase):
 
     def zzzcmd(self, cmdline):
         '''Given a command line string, call zzzfs_main/zzzpool_main, to
-        exercise argparse code.
+        exercise argparse code. Any Unix-style paths will be converted to use
+        platform-specific path separators.
         '''
-        args = cmdline.split(' ')
+        args = cmdline.replace('/', os.path.sep).split(' ')
         return globals()[args[0] + '_main'](args)
 
 
