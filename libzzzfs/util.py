@@ -81,6 +81,19 @@ class PropertyList(object):
                 yield str
 
 
+class PropertyAssignment(object):
+    '''property=value command-line argument, as used in zzzfs set command.'''
+    def __init__(self, user_string):
+        try:
+            self.key, self.val = user_string.split('=')
+        except ValueError:
+            raise ZzzFSException(
+                '%r: invalid property=value format' % user_string)
+
+        if not validate_component_name(self.key):
+            raise ZzzFSException('%s: invalid property' % self.key)
+
+
 def tabulated(data, headers, scriptable_mode=False, sort_asc=[], sort_desc=[]):
     '''Generates a printable table as a string given data (an array of dicts)
     and an array of field names for headers.

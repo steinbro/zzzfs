@@ -44,11 +44,15 @@ def clone(snapshot, filesystem):
     return [dataset1, dataset2]
 
 
-def create(filesystem, create_parents):
+def create(filesystem, create_parents, properties):
     '''Create a filesystem.'''
     dataset = get_dataset_by(
         filesystem, should_be=Filesystem, should_exist=False)
+
     dataset.create(create_parents)
+    for keyval in properties:
+        dataset.add_local_property(keyval.key, keyval.val)
+
     return dataset
 
 
@@ -214,21 +218,13 @@ def send(snapshot, stream=sys.stdout):
 
 def set(keyval, identifiers):
     '''Set a property value for a set of datasets.'''
-    try:
-        key, val = keyval.split('=')
-    except ValueError:
-        raise ZzzFSException('%r: invalid property=value format' % keyval)
-
-    if not validate_component_name(key):
-        raise ZzzFSException('%s: invalid property' % key)
-
     datasets = [get_dataset_by(identifier) for identifier in identifiers]
     for dataset in datasets:
-        dataset.add_local_property(key, val)
+        dataset.add_local_property(keyval.key, keyval.val)
     return datasets
 
 
-def snapshot(snapshots):
+def snapshot(snapshots, properties):
     '''Create a snapshot of a filesystem.'''
     for i in snapshots:
         dataset = get_dataset_by(i, should_be=Snapshot, should_exist=False)
@@ -236,4 +232,6 @@ def snapshot(snapshots):
             raise ZzzFSException(
                 '%s: no such filesystem' % dataset.filesystem.name)
         dataset.create()
+        for keyval in properties:
+            dataset.add_local_property(keyval.key, keyval.val)
         yield dataset

@@ -167,6 +167,11 @@ class ZFSTest(ZzzFSTestBase):
         self.assertTrue(
             get_dataset_by('foo/missing/subfoo', should_exist=None).exists())
 
+    def test_zfs_create_with_properties(self):
+        self.zzzcmd('zzzfs create -o x=1 -o y=2 foo/subfoo')
+        self.assertEqual('1', self.zzzcmd('zzzfs get -H -o value x foo/subfoo'))
+        self.assertEqual('2', self.zzzcmd('zzzfs get -H -o value y foo/subfoo'))
+
     def test_zfs_destroy(self):
         # directory in pool data should be removed
         self.zzzcmd('zzzfs create -p foo/subfoo')
@@ -323,6 +328,13 @@ class ZFSTest(ZzzFSTestBase):
             self.zzzcmd('zzzfs snapshot foo@fourth foo@fourth')
         # should have been created once, anyway
         self.assertIn('foo@fourth', self.zzzcmd('zzzfs list -t snapshots'))
+
+    def test_zfs_snapshot_with_properties(self):
+        self.zzzcmd('zzzfs snapshot -o x=1 -o y=2 foo@first')
+        self.assertEqual(
+            '1', self.zzzcmd('zzzfs get -H -t snap -o value x foo@first'))
+        self.assertEqual(
+            '2', self.zzzcmd('zzzfs get -H -t snap -o value y foo@first'))
 
     def test_zfs_rollback(self):
         # both files and properties should be restored

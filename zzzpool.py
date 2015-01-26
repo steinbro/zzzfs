@@ -64,6 +64,9 @@ def zzzpool_main(argv):
     params = dict(args._get_kwargs())
     del params['command']
 
+    if args.command is None:
+        sys.exit(parser.print_usage())
+
     retval = getattr(zpool, args.command)(**params)
     if type(retval) is str:
         return retval

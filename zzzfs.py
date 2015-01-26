@@ -25,7 +25,7 @@ import sys
 import argparse
 from libzzzfs import zfs
 from libzzzfs.dataset import Dataset, Pool
-from libzzzfs.util import PropertyList, ZzzFSException
+from libzzzfs.util import PropertyAssignment, PropertyList, ZzzFSException
 
 
 def zzzfs_main(argv):
@@ -43,6 +43,9 @@ def zzzfs_main(argv):
     create.add_argument(
         '-p', action='store_true', dest='create_parents',
         help='create missing parent filesystems')
+    create.add_argument(
+        '-o', metavar='property=value', action='append', dest='properties',
+        default=[], type=PropertyAssignment, help='set the specified property')
 
     destroy = subparsers.add_parser('destroy', help='destroy a filesystem')
     destroy.add_argument('filesystem')
@@ -139,17 +142,24 @@ def zzzfs_main(argv):
 
     set_ = subparsers.add_parser(
         'set', help='set a property value for a dataset')
-    set_.add_argument('keyval', metavar='property=value')
+    set_.add_argument(
+        'keyval', metavar='property=value', type=PropertyAssignment)
     set_.add_argument('identifiers', metavar='filesystem|snapshot', nargs='+')
 
     snap = subparsers.add_parser(
         'snapshot', help='create snapshots of filesystems')
     snap.add_argument('snapshots', metavar='filesystem@snapname', nargs='+')
+    snap.add_argument(
+        '-o', metavar='property=value', action='append', dest='properties',
+        default=[], type=PropertyAssignment, help='set the specified property')
 
     # generate dict of argument keys/values
     args = parser.parse_args(argv[1:])
     params = dict(args._get_kwargs())
     del params['command']
+
+    if args.command is None:
+        sys.exit(parser.print_usage())
 
     retval = getattr(zfs, args.command)(**params)
 
