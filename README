@@ -18,35 +18,35 @@ disk.
 This is a functional work in progress; don't trust any important data to it
 just yet. The test suite covers the following features:
 
- - create/destroy/list "filesystems" and "pools"
- - clone/promote, send/receive, rollback, diff snapshots
- - get/set/inherit attributes
- - pool command history
+* create/destroy/list "filesystems" and "pools"
+* clone/promote, send/receive, rollback, diff snapshots
+* get/set/inherit attributes
+* pool command history
 
 
-Example usage:
+Example usage::
 
-  $ ./zzzpool.py create mypool /tmp/pool
-  $ ./zzzpool.py list
+  $ zzzpool create mypool /tmp/pool
+  $ zzzpool list
   NAME    SIZE    ALLOC   FREE    CAP     HEALTH  ALTROOT
   mypool     -        -      -      -     ONLINE  -
-  $ ./zzzfs.py create mypool/work
-  $ ./zzzfs.py create mypool/play
-  $ ./zzzfs.py snapshot mypool/work@yesterday
-  $ ./zzzfs.py list -t all
+  $ zzzfs create mypool/work
+  $ zzzfs create mypool/play
+  $ zzzfs snapshot mypool/work@yesterday
+  $ zzzfs list -t all
   NAME                    USED    AVAIL   REFER   MOUNTPOINT
   mypool                     -        -       -   /private/tmp/pool/mypool
   mypool/play                -        -       -   /private/tmp/pool/mypool/play
   mypool/work                -        -       -   /private/tmp/pool/mypool/work
   mypool/work@yesterday      -        -       -   -
-  $ ./zzzfs.py send mypool/work@yesterday | zzzfs receive mypool/more_work
-  $ ./zzzpool.py history
+  $ zzzfs send mypool/work@yesterday | zzzfs receive mypool/more_work
+  $ zzzpool history
   History for 'mypool':
-  2015-01-13.22:32:38 ./zzzpool.py create mypool /tmp/pool
-  2015-01-13.22:32:50 ./zzzfs.py create mypool/work
-  2015-01-13.22:32:53 ./zzzfs.py create mypool/play
-  2015-01-13.22:32:56 ./zzzfs.py snapshot mypool/work@yesterday
-  2015-01-13.22:33:48 ./zzzfs.py receive mypool/more_work
+  2015-01-13.22:32:38 zzzpool create mypool /tmp/pool
+  2015-01-13.22:32:50 zzzfs create mypool/work
+  2015-01-13.22:32:53 zzzfs create mypool/play
+  2015-01-13.22:32:56 zzzfs snapshot mypool/work@yesterday
+  2015-01-13.22:33:48 zzzfs receive mypool/more_work
 
 
 For more details on real ZFS command usage, see the Oracle Solaris ZFS

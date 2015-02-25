@@ -31,8 +31,8 @@ import unittest
 from libzzzfs import zfs
 from libzzzfs.dataset import get_dataset_by
 from libzzzfs.util import ZzzFSException
-from zzzfs import zzzfs_main
-from zzzpool import zzzpool_main
+from libzzzfs.cmd.zzzfs import zzzfs_main
+from libzzzfs.cmd.zzzpool import zzzpool_main
 
 
 class ZzzFSTestBase(unittest.TestCase):

@@ -176,7 +176,7 @@ def zzzfs_main(argv):
                 Pool(pool_name).log_history_event(argv)
 
 
-if __name__ == '__main__':
+def main():
     try:
         output = zzzfs_main(sys.argv)
     except ZzzFSException as e:
@@ -184,3 +184,7 @@ if __name__ == '__main__':
 
     if output:
         print(output)
+
+
+if __name__ == '__main__':
+    main()

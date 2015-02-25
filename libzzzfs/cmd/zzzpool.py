@@ -75,7 +75,7 @@ def zzzpool_main(argv):
         retval.log_history_event(argv)
 
 
-if __name__ == '__main__':
+def main():
     try:
         output = zzzpool_main(sys.argv)
     except ZzzFSException as e:
@@ -83,3 +83,7 @@ if __name__ == '__main__':
 
     if output:
         print(output)
+
+
+if __name__ == '__main__':
+    main()
