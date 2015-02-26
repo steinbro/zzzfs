@@ -316,18 +316,18 @@ class ZFSTest(ZzzFSTestBase):
     def test_zfs_snapshot(self):
         self.populate_randomly(os.path.join(self.zroot1, 'foo'))
         self.zzzcmd('zzzfs snapshot foo@first')
-        self.assertIn('foo@first', self.zzzcmd('zzzfs list -t snapshots'))
+        self.assertIn('foo@first', self.zzzcmd('zzzfs list -t snapshot'))
 
         # multiple snapshots can be specified in the same command
         self.zzzcmd('zzzfs snapshot foo@second foo@third')
-        self.assertIn('foo@second', self.zzzcmd('zzzfs list -t snapshots'))
-        self.assertIn('foo@third', self.zzzcmd('zzzfs list -t snapshots'))
+        self.assertIn('foo@second', self.zzzcmd('zzzfs list -t snapshot'))
+        self.assertIn('foo@third', self.zzzcmd('zzzfs list -t snapshot'))
 
         # duplicate snapshot names should fail cleanly
         with self.assertRaises(ZzzFSException):
             self.zzzcmd('zzzfs snapshot foo@fourth foo@fourth')
         # should have been created once, anyway
-        self.assertIn('foo@fourth', self.zzzcmd('zzzfs list -t snapshots'))
+        self.assertIn('foo@fourth', self.zzzcmd('zzzfs list -t snapshot'))
 
     def test_zfs_snapshot_with_properties(self):
         self.zzzcmd('zzzfs snapshot -o x=1 -o y=2 foo@first')
@@ -413,14 +413,14 @@ class ZFSTest(ZzzFSTestBase):
         self.zzzcmd('zzzfs snapshot foo@first')
         self.zzzcmd('zzzfs rename foo@first foo@second')
 
-        self.assertNotIn('foo@first', self.zzzcmd('zzzfs list -t snapshots'))
-        self.assertIn('foo@second', self.zzzcmd('zzzfs list -t snapshots'))
+        self.assertNotIn('foo@first', self.zzzcmd('zzzfs list -t snapshot'))
+        self.assertIn('foo@second', self.zzzcmd('zzzfs list -t snapshot'))
 
         self.zzzcmd('zzzfs snapshot foo@third')
         self.zzzcmd('zzzfs rename foo@third fourth')
 
-        self.assertNotIn('foo@third', self.zzzcmd('zzzfs list -t snapshots'))
-        self.assertIn('foo@fourth', self.zzzcmd('zzzfs list -t snapshots'))
+        self.assertNotIn('foo@third', self.zzzcmd('zzzfs list -t snapshot'))
+        self.assertIn('foo@fourth', self.zzzcmd('zzzfs list -t snapshot'))
 
         # try to rename to different parent filesystem
         self.zzzcmd('zzzfs create foo/subfoo')

@@ -109,7 +109,7 @@ def get_all_datasets(identifiers, types, recursive, max_depth):
     '''Get all datasets matching the given identifier names and dataset types,
     and optionally all or a generational subset of their descendants.
     '''
-    types.validate_against(['all', 'filesystems', 'snapshots', 'snap'])
+    types.validate_against(['all', 'filesystem', 'snapshot', 'snap'])
 
     # start with set of all filesystems and snapshots
     filesystems = [f for p in Pool.all() for f in p.get_filesystems()]
@@ -136,11 +136,11 @@ def get_all_datasets(identifiers, types, recursive, max_depth):
                 datasets += d.get_snapshots()
 
     # filter out filesystems, if not requested
-    if not any(t in ('all', 'filesystems') for t in types.items):
+    if not any(t in ('all', 'filesystem') for t in types.items):
         datasets = [d for d in datasets if not isinstance(d, Filesystem)]
 
     # filter out snapshots, if not requested
-    if not any(t in ('all', 'snapshots', 'snap') for t in types.items):
+    if not any(t in ('all', 'snapshot', 'snap') for t in types.items):
         datasets = [d for d in datasets if not isinstance(d, Snapshot)]
 
     return datasets

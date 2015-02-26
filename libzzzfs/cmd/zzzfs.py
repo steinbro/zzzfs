@@ -80,8 +80,8 @@ def zzzfs_main(argv):
         help='comma-separated list of fields (name, property, value, source)')
     get.add_argument(
         '-t', metavar='type[,type...]', dest='types', type=PropertyList,
-        default=PropertyList('filesystems'),
-        help='comma-separated list of types (all, filesystems, snapshots)')
+        default=PropertyList('filesystem'),
+        help='comma-separated list of types (all, filesystem, snapshot)')
     get.add_argument(
         '-s', metavar='source[,source...]', type=PropertyList, dest='sources',
         default=PropertyList('local,inherited'),
@@ -110,8 +110,8 @@ def zzzfs_main(argv):
         default=PropertyList('name,used,available,refer,mountpoint'))
     list_.add_argument(
         '-t', metavar='type[,type...]', dest='types', type=PropertyList,
-        default=PropertyList('filesystems'),
-        help='comma-separated list of types (all, filesystems, snapshots)')
+        default=PropertyList('filesystem'),
+        help='comma-separated list of types (all, filesystem, snapshot)')
     list_.add_argument(
         '-s', metavar='property', dest='sort_asc', action='append', default=[],
         help='sort by property (ascending)')
