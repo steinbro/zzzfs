@@ -440,10 +440,16 @@ class ZFSTest(ZzzFSTestBase):
         self.zzzcmd('zzzfs clone foo/production@today foo/beta')
         self.assertEqual(
             self.all_files_in(beta_path), self.all_files_in(production_path))
+        self.assertEqual(
+            'foo/production@today',
+            self.zzzcmd('zzzfs get -H -o value origin foo/beta'))
 
         self.delete_something_in(beta_path)
         beta_contents = self.all_files_in(beta_path)
         self.zzzcmd('zzzfs promote foo/beta')
+        self.assertEqual(
+            '', self.zzzcmd('zzzfs get -H -o value origin foo/beta'))
+
         self.zzzcmd('zzzfs rename foo/production foo/legacy')
         self.zzzcmd('zzzfs rename foo/beta foo/production')
         self.zzzcmd('zzzfs destroy foo/legacy')

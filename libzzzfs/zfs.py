@@ -41,6 +41,8 @@ def clone(snapshot, filesystem):
         filesystem, should_be=Filesystem, should_exist=False)
 
     dataset1.clone_to(dataset2)
+    dataset2.add_local_property('origin', dataset1.full_name)
+
     return [dataset1, dataset2]
 
 
@@ -154,9 +156,10 @@ def list(identifiers, types, scriptable_mode, headers, recursive, max_depth,
 
 def promote(clone_filesystem):
     '''Turn a cloned snapshot into a standalone filesystem.'''
-    # Since there are no actual dependencies in ZzzFS, this is a no-op.
+    # Since there are no actual dependencies in ZzzFS, simply unset 'origin'.
     dataset = get_dataset_by(
         clone_filesystem, should_be=Filesystem, should_exist=True)
+    dataset.remove_local_property('origin')
     return dataset
 
 

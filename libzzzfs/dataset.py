@@ -221,6 +221,14 @@ class Dataset(object):
         val, _ = self.get_property_and_source(key)
         return val
 
+    def remove_local_property(self, key):
+        if self.get_property_and_source(key)[1] == 'local':
+            os.remove(os.path.join(self.properties, key))
+            return True
+        else:
+            # property did not exist, or is not local
+            return False
+
 
 class Pool(Dataset):
     def __init__(self, name, should_exist=None):
