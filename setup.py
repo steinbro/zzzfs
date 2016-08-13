@@ -3,7 +3,7 @@ from setuptools import setup
 
 setup(
     name='zzzfs',
-    version='0.1',
+    version='0.1.1',
     description='Dataset management à la ZFS',
     long_description=open('README').read(),
     author='Daniel W. Steinbrook',

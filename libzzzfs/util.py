@@ -53,8 +53,11 @@ class PropertyList(object):
     # synonymous field names
     shorthand = {'available': 'avail', 'capacity': 'cap'}
 
+    def __str__(self):
+        return ','.join(self.items)
+
     def __repr__(self):
-        return '<%s: %s>' % (self.__class__.__name__, ','.join(self.items))
+        return '<%s: %s>' % (self.__class__.__name__, str(self))
 
     def __init__(self, user_string):
         self.items = user_string.split(',')
@@ -92,6 +95,11 @@ class PropertyAssignment(object):
 
         if not validate_component_name(self.key):
             raise ZzzFSException('%s: invalid property' % self.key)
+
+        self.user_string = user_string
+
+    def __str__(self):
+        return self.user_string
 
 
 def tabulated(data, headers, scriptable_mode=False, sort_asc=[], sort_desc=[]):
