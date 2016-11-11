@@ -70,7 +70,12 @@ def diff(identifier, other_identifier):
     against the current working filesystem.
     '''
     dataset1 = get_dataset_by(identifier, should_be=Snapshot)
-    dataset2 = get_dataset_by(other_identifier)
+    if other_identifier is not None:
+        dataset2 = get_dataset_by(other_identifier)
+    else:
+        # compare against current version of filesystem
+        dataset2 = dataset1.filesystem
+
     # real ZFS can't diff snapshots in different filesystem; not so in ZzzFS
     #if isinstance(dataset2, Filesystem) and (
     #        dataset1.filesystem.name != dataset2.filesystem.name):

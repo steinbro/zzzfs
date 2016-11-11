@@ -69,7 +69,8 @@ class ZzzfsCommandInterpreter(CommandInterpreter):
         diff = subparsers.add_parser(
             'diff', help='compare filesystem/snapshot against a snapshot')
         diff.add_argument('identifier', metavar='snapshot')
-        diff.add_argument('other_identifier', metavar='snapshot|filesystem')
+        diff.add_argument(
+            'other_identifier', metavar='snapshot|filesystem', nargs='?')
 
         get = subparsers.add_parser('get', help='get dataset properties')
         recursive_or_depth = get.add_mutually_exclusive_group()

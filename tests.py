@@ -391,6 +391,11 @@ class ZFSTest(ZzzFSTestBase):
         self.assertTrue(
             self.zzzcmd('zzzfs diff foo@first foo').startswith('-\t'))
 
+        # if only one argument, diff against current
+        self.assertEqual(
+            self.zzzcmd('zzzfs diff foo@first'),
+            self.zzzcmd('zzzfs diff foo@first foo'))
+
     def test_zfs_rename_filesystem(self):
         something_path = os.path.join(self.zroot1, 'foo', 'something')
         subfoo_path = os.path.join(self.zroot1, 'foo', 'subfoo')
