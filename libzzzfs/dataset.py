@@ -49,6 +49,7 @@ import os
 import csv
 import pwd
 import gzip
+import time
 import shutil
 import logging
 import tarfile
@@ -342,6 +343,9 @@ class Filesystem(Dataset):
     def base_attrs(self):
         data = super(Filesystem, self).base_attrs
         data['mountpoint'] = self.mountpoint
+        # On POSIX systems, ctime is metadata change time, not file creation
+        # time, but these should be the same value for our dataset roots.
+        data['creation'] = time.ctime(os.path.getctime(self.root))
         return data
 
     def exists(self):
@@ -476,6 +480,9 @@ class Snapshot(Dataset):
     def base_attrs(self):
         data = super(Snapshot, self).base_attrs
         data['name'] = self.full_name
+        # On POSIX systems, ctime is metadata change time, not file creation
+        # time, but these should be the same value for our dataset roots.
+        data['creation'] = time.ctime(os.path.getctime(self.root))
         return data
 
     def exists(self):

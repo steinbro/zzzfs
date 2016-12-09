@@ -216,6 +216,11 @@ class ZFSTest(ZzzFSTestBase):
             'nothing',
             self.zzzcmd('zzzfs get -H -o value -s inherited all foo'))
 
+        # both filesystems have the same creation time (to the nearest minute)
+        self.assertEqual(
+            self.zzzcmd('zzzfs get -H -o value creation foo'),
+            self.zzzcmd('zzzfs get -H -o value creation foo/subfoo'))
+
         # invalid headers/property names
         with self.assertRaises(ZzzFSException):
             self.zzzcmd('zzzfs get -o no,such,headers myvar foo')
