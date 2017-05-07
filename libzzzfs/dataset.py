@@ -166,6 +166,15 @@ class Dataset(object):
     def base_attrs(self):
         return {'name': self.name}
 
+    @property
+    def creation(self):
+        # On POSIX systems, ctime is metadata change time, not file creation
+        # time, but these should be the same value for our dataset roots.
+        try:
+            return time.ctime(os.path.getctime(self.root))
+        except OSError:  # dataset is currently being destroyed, perhaps
+            return None
+
     def get_parent(self):
         if '/' in self.name:
             return Filesystem(self.name.rsplit('/', 1)[-2])
@@ -173,11 +182,13 @@ class Dataset(object):
 
     def get_local_properties(self):
         attrs = self.base_attrs
-        if not os.path.exists(self.properties):
+        try:
+            keys = os.listdir(self.properties)
+        except OSError:
             # no local attributes
             return attrs
 
-        for key in os.listdir(self.properties):
+        for key in keys:
             with open(os.path.join(self.properties, key), 'r') as f:
                 attrs[key] = f.read()
 
@@ -284,9 +295,14 @@ class Pool(Dataset):
         shutil.rmtree(self.root)
 
     def get_filesystems(self):
-        # unescape slashes when instantiating Filesystem object
-        return [Filesystem(x.replace('%', '/'))
-            for x in os.listdir(self.filesystems)]
+        try:
+            fs = os.listdir(self.filesystems)
+        except OSError:  # dataset is currently being destroyed, perhaps
+            return
+
+        for x in fs:
+            # unescape slashes when instantiating Filesystem object
+            yield Filesystem(x.replace('%', '/'))
 
     def get_history(self, long_format=False):
         try:
@@ -337,15 +353,16 @@ class Filesystem(Dataset):
     def mountpoint(self):
         # before the filesystem is created, the symlink doesn't resolve, so
         # this is a method that recomputes te property whenever it is accessed
-        return os.path.realpath(self.data)
+        try:
+            return os.path.realpath(self.data)
+        except OSError:  # dataset is currently being destroyed, perhaps
+            return None
 
     @property
     def base_attrs(self):
         data = super(Filesystem, self).base_attrs
         data['mountpoint'] = self.mountpoint
-        # On POSIX systems, ctime is metadata change time, not file creation
-        # time, but these should be the same value for our dataset roots.
-        data['creation'] = time.ctime(os.path.getctime(self.root))
+        data['creation'] = self.creation
         return data
 
     def exists(self):
@@ -365,7 +382,13 @@ class Filesystem(Dataset):
         return children
 
     def get_snapshots(self):
-        return [Snapshot(self.name, x) for x in os.listdir(self.snapshots)]
+        try:
+            snaps = os.listdir(self.snapshots)
+        except OSError:  # dataset is currently being destroyed, perhaps
+            return
+
+        for x in snaps:
+            yield Snapshot(self.name, x)
 
     def create(self, create_parents=False, from_stream=None):
         if not self.get_parent().exists():
@@ -480,9 +503,7 @@ class Snapshot(Dataset):
     def base_attrs(self):
         data = super(Snapshot, self).base_attrs
         data['name'] = self.full_name
-        # On POSIX systems, ctime is metadata change time, not file creation
-        # time, but these should be the same value for our dataset roots.
-        data['creation'] = time.ctime(os.path.getctime(self.root))
+        data['creation'] = self.creation
         return data
 
     def exists(self):
